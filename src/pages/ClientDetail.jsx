@@ -20,6 +20,7 @@ export default function ClientDetail() {
     const [expandedService, setExpandedService] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [serviceTypes, setServiceTypes] = useState([]);
 
     // Modals
     const [clientModalOpen, setClientModalOpen] = useState(false);
@@ -40,6 +41,18 @@ export default function ClientDetail() {
         fetchClientData();
         fetchStaff();
     }, [id]);
+
+    useEffect(() => {
+        const fetchServiceTypes = async () => {
+            try {
+                const response = await axios.get('/api/service-types');
+                setServiceTypes(response.data);
+            } catch (error) {
+                console.error("Error fetching service types:", error);
+            }
+        };
+        fetchServiceTypes();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -196,7 +209,7 @@ export default function ClientDetail() {
     const canEditMM = isSuperAdmin || isMM;
     const canEditDM = isSuperAdmin || isDM;
     const canEditTL = isSuperAdmin || isMM || isDM;
-    const canEditBasicInfo = isSuperAdmin; 
+    const canEditBasicInfo = isSuperAdmin;
 
     const getTrafficLightColor = (status) => {
         if (!status) return 'bg-gray-300';
@@ -445,7 +458,7 @@ export default function ClientDetail() {
                             <div className="md:col-span-3 mt-2 border-t pt-4">
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Recurring Invoice Day (Monthly)</label>
                                 <div className="flex items-center gap-4">
-                                    <input 
+                                    <input
                                         type="number" min="1" max="31"
                                         className="w-20 text-xs border rounded p-1.5 bg-white"
                                         value={client.recurring_day || 1}
@@ -510,7 +523,7 @@ export default function ClientDetail() {
                             <form onSubmit={handleCompleteOnboarding} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-3">
                                     <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Date</label>
-                                    <input 
+                                    <input
                                         type="date"
                                         className="w-full text-xs border rounded p-1.5 bg-white"
                                         value={editingClient.onboarding_date}
@@ -521,14 +534,14 @@ export default function ClientDetail() {
                                 <div className="space-y-3">
                                     <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Discussion (PDF Link)</label>
                                     <div className="flex gap-2">
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Enter PDF URL or click simulate upload"
                                             className="flex-1 text-xs border rounded p-1.5 bg-white"
                                             value={editingClient.onboarding_pdf_url}
                                             onChange={(e) => setEditingClient({ ...editingClient, onboarding_pdf_url: e.target.value })}
                                         />
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => setEditingClient({ ...editingClient, onboarding_pdf_url: `https://storage.agency.com/docs/onboarding-${id}.pdf` })}
                                             className="px-3 py-1 bg-green-600 text-white text-[10px] rounded font-bold uppercase"
@@ -781,7 +794,7 @@ export default function ClientDetail() {
                         <form onSubmit={handleSaveService} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Service Type</label>
-                                <select
+                                {/* <select
                                     value={editingService.type}
                                     onChange={(e) => setEditingService({ ...editingService, type: e.target.value })}
                                     className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
@@ -797,7 +810,23 @@ export default function ClientDetail() {
                                         </>
                                     )}
                                     {(isSuperAdmin || isDM) && <option value="Development">Development</option>}
+                                </select> */}
+
+                                <select
+                                    name="type"
+                                    value={editingService.type || ''} // Adjust variable name based on your state
+                                    onChange={(e) => setEditingService({ ...editingService, type: e.target.value })} // Adjust to match your onChange handler
+                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="" disabled>Select Service Type</option>
+                                    {serviceTypes.map((st) => (
+                                        <option key={st.id} value={st.name}>
+                                            {st.name}
+                                        </option>
+                                    ))}
                                 </select>
+
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

@@ -12,6 +12,53 @@ export default function Projects() {
     const [dashboardView, setDashboardView] = useState('team'); // 'team' or 'mine'
     const [activeFilter, setActiveFilter] = useState('All');
     const navigate = useNavigate();
+    // State for dynamic services
+    const [services, setServices] = useState([]);
+    // State for the modal
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [newServiceName, setNewServiceName] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Role verification
+    const allowedRoles = [
+        'super_admin', 'admin', 'sales', 'finance',
+        'am_head', 'account_manager', 'marketing_manager', 'dev_manager'
+    ];
+    const canAddService = user && allowedRoles.includes(user.role);
+
+    // Fetch dynamic services on component mount
+    useEffect(() => {
+        fetchServices();
+    }, []);
+
+    const fetchServices = async () => {
+        try {
+            // Updated URL
+            const response = await axios.get('/api/service-types');
+            setServices(response.data);
+        } catch (error) {
+            console.error("Error fetching services:", error);
+        }
+    };
+
+    const handleAddService = async (e) => {
+        e.preventDefault();
+        if (!newServiceName.trim()) return;
+
+        setIsSubmitting(true);
+        try {
+            // Updated URL
+            const response = await axios.post('/api/service-types', { name: newServiceName });
+            setServices([...services, response.data]);
+            setNewServiceName('');
+            setIsServiceModalOpen(false);
+        } catch (error) {
+            console.error("Error adding service:", error);
+            alert(error.response?.data?.error || "Failed to add service.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     useEffect(() => {
         fetchProjects();
@@ -65,7 +112,7 @@ export default function Projects() {
                 </div>
                 <div className="flex items-center gap-4">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(user?.role === 'am_head' || user?.role === 'super_admin' || user?.role === 'admin') && (
+                    {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -81,122 +128,176 @@ export default function Projects() {
                             </button>
                         </div>
                     )}
-                        <div className="relative">
-                            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                            <input
-                                type="text"
-                                placeholder="Search client or service..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
-                            />
-                        </div>
+                    <div className="relative">
+                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            placeholder="Search client or service..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
+                        />
                     </div>
                 </div>
-
-                {/* Filters */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {serviceTypes.map(type => (
-                        <button
-                            key={type}
-                            onClick={() => setActiveFilter(type)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeFilter === type
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
-                                : 'bg-white text-gray-400 border border-gray-100 hover:border-blue-200'
-                                }`}
-                        >
-                            {type}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                    {loading ? (
-                        <div className="p-20 flex justify-center col-span-full">
-                            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-                        </div>
-                    ) : (
-                        filteredProjects.map((project) => (
-                            <div
-                                key={project.id}
-                                onClick={() => navigate(`/clients/${project.client_id}`)}
-                                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
-                            >
-                                <div className="flex items-center gap-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-blue-600 font-bold group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                        <Briefcase className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <h3 className="font-black text-gray-900 uppercase tracking-tighter text-lg leading-none">{project.client_name}</h3>
-                                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-black rounded border border-blue-100 uppercase tracking-widest leading-none">
-                                                {project.type}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-gray-400 font-medium">{project.client_domain}</p>
-                                    </div>
-                                </div>
-
-                                <div className="hidden lg:flex items-center gap-8">
-                                    <div className="text-center min-w-[120px]">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Account Manager</p>
-                                        <p className="font-bold text-gray-900 text-sm">{project.am_name || 'N/A'}</p>
-                                    </div>
-                                    <div className="text-center min-w-[120px]">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</p>
-                                        <p className="font-bold text-gray-900 text-sm">{project.tl_name || 'Unassigned'}</p>
-                                    </div>
-                                    <div className="text-center min-w-[100px]">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Health</p>
-                                        <div className="flex justify-center gap-1" onClick={e => e.stopPropagation()}>
-                                            {['Green', 'Orange', 'Red'].map(color => (
-                                                <button
-                                                    key={color}
-                                                    onClick={() => handleStatusUpdate({ stopPropagation: () => { } }, project.id, { status_color: color })}
-                                                    className={`w-3 h-3 rounded-full border transition-all ${project.status_color === color
-                                                        ? (color === 'Green' ? 'bg-green-500 border-green-600 scale-125 shadow-sm' : color === 'Orange' ? 'bg-amber-400 border-amber-500 scale-125 shadow-sm' : 'bg-rose-500 border-rose-600 scale-125 shadow-sm')
-                                                        : 'bg-gray-100 border-gray-200 opacity-30 hover:opacity-60'
-                                                        }`}
-                                                    title={color}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="text-center min-w-[100px]">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                                        <select
-                                            value={project.status || 'Active'}
-                                            onClick={(e) => e.stopPropagation()}
-                                            onChange={(e) => handleStatusUpdate(e, project.id, { status: e.target.value })}
-                                            className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border focus:outline-none appearance-none cursor-pointer ${getStatusColor(project.status)}`}
-                                        >
-                                            <option value="Active">Active</option>
-                                            <option value="Pause">Pause</option>
-                                            <option value="Hold">Hold</option>
-                                        </select>
-                                    </div>
-                                    <div className="text-center min-w-[100px]">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</p>
-                                        <p className="font-black text-gray-900 italic">
-                                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.monthly_fee || 0)}
-                                        </p>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-                                </div>
-                            </div>
-                        ))
-                    )}
-
-                    {!loading && filteredProjects.length === 0 && (
-                        <div className="p-20 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-                            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-300">
-                                <LayoutDashboard className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900">No projects found</h3>
-                            <p className="text-gray-500 text-sm">No services match your current filters or department.</p>
-                        </div>
-                    )}
             </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 mb-6">
+                {['All', ...services.map(s => s.name)].map((filterName) => (
+                    <button
+                        key={filterName}
+                        //onClick={() => setActiveFilter(filterName)}
+                        onClick={() => setActiveFilter(filterName)} // Assuming activeFilter is your state
+                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeFilter === filterName
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
+                            : 'bg-white text-gray-400 border border-gray-100 hover:border-blue-200'
+                            }`}
+                    >
+                        {filterName}
+                    </button>
+                ))}
+                {/* Put this beside your service filter listing */}
+                {canAddService && (
+                    <button
+                        onClick={() => setIsServiceModalOpen(true)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-blue-600 hover:bg-blue-700 text-white shadow duration-150"
+                    >
+                        + Add service
+                    </button>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                {loading ? (
+                    <div className="p-20 flex justify-center col-span-full">
+                        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                    </div>
+                ) : (
+                    filteredProjects.map((project) => (
+                        <div
+                            key={project.id}
+                            onClick={() => navigate(`/clients/${project.client_id}`)}
+                            className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
+                        >
+                            <div className="flex items-center gap-6">
+                                <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-blue-600 font-bold group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                    <Briefcase className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h3 className="font-black text-gray-900 uppercase tracking-tighter text-lg leading-none">{project.client_name}</h3>
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-black rounded border border-blue-100 uppercase tracking-widest leading-none">
+                                            {project.type}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 font-medium">{project.client_domain}</p>
+                                </div>
+                            </div>
+
+                            <div className="hidden lg:flex items-center gap-8">
+                                <div className="text-center min-w-[120px]">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Account Manager</p>
+                                    <p className="font-bold text-gray-900 text-sm">{project.am_name || 'N/A'}</p>
+                                </div>
+                                <div className="text-center min-w-[120px]">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</p>
+                                    <p className="font-bold text-gray-900 text-sm">{project.tl_name || 'Unassigned'}</p>
+                                </div>
+                                <div className="text-center min-w-[100px]">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Health</p>
+                                    <div className="flex justify-center gap-1" onClick={e => e.stopPropagation()}>
+                                        {['Green', 'Orange', 'Red'].map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => handleStatusUpdate({ stopPropagation: () => { } }, project.id, { status_color: color })}
+                                                className={`w-3 h-3 rounded-full border transition-all ${project.status_color === color
+                                                    ? (color === 'Green' ? 'bg-green-500 border-green-600 scale-125 shadow-sm' : color === 'Orange' ? 'bg-amber-400 border-amber-500 scale-125 shadow-sm' : 'bg-rose-500 border-rose-600 scale-125 shadow-sm')
+                                                    : 'bg-gray-100 border-gray-200 opacity-30 hover:opacity-60'
+                                                    }`}
+                                                title={color}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="text-center min-w-[100px]">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                                    <select
+                                        value={project.status || 'Active'}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => handleStatusUpdate(e, project.id, { status: e.target.value })}
+                                        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border focus:outline-none appearance-none cursor-pointer ${getStatusColor(project.status)}`}
+                                    >
+                                        <option value="Active">Active</option>
+                                        <option value="Pause">Pause</option>
+                                        <option value="Hold">Hold</option>
+                                    </select>
+                                </div>
+                                <div className="text-center min-w-[100px]">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</p>
+                                    <p className="font-black text-gray-900 italic">
+                                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.monthly_fee || 0)}
+                                    </p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                            </div>
+                        </div>
+                    ))
+                )}
+
+                {!loading && filteredProjects.length === 0 && (
+                    <div className="p-20 text-center bg-white rounded-3xl border border-dashed border-gray-200">
+                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-300">
+                            <LayoutDashboard className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">No projects found</h3>
+                        <p className="text-gray-500 text-sm">No services match your current filters or department.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Add Service Modal */}
+            {isServiceModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Add New Service</h2>
+
+                        <form onSubmit={handleAddService}>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Service Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newServiceName}
+                                    onChange={(e) => setNewServiceName(e.target.value)}
+                                    placeholder="e.g., SEO, G-ADS, META"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsServiceModalOpen(false)}
+                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition duration-150"
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition duration-150 disabled:opacity-50"
+                                    disabled={isSubmitting || !newServiceName.trim()}
+                                >
+                                    {isSubmitting ? 'Saving...' : 'Save Service'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

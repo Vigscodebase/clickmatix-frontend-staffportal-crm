@@ -13,6 +13,7 @@ export default function Clients() {
     const [dashboardView, setDashboardView] = useState('team'); // 'team' or 'mine'
     const [modalOpen, setModalOpen] = useState(false);
     const [error, setError] = useState('');
+    const [serviceTypes, setServiceTypes] = useState([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -31,6 +32,18 @@ export default function Clients() {
         fetchClients();
         fetchStaff();
     }, [dashboardView]);
+
+    useEffect(() => {
+        const fetchServiceTypes = async () => {
+            try {
+                const response = await axios.get('/api/service-types');
+                setServiceTypes(response.data);
+            } catch (error) {
+                console.error("Error fetching service types:", error);
+            }
+        };
+        fetchServiceTypes();
+    }, []);
 
     const fetchClients = async () => {
         try {
@@ -102,7 +115,7 @@ export default function Clients() {
                 </div>
                 <div className="flex items-center gap-4">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(user?.role === 'am_head' || user?.role === 'super_admin' || user?.role === 'admin') && (
+                    {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -379,7 +392,7 @@ export default function Clients() {
                                                 <div key={index} className="grid grid-cols-5 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 items-end">
                                                     <div className="col-span-1">
                                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Service Type</label>
-                                                        <select
+                                                        {/* <select
                                                             value={svc.type}
                                                             onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
                                                             className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
@@ -390,6 +403,19 @@ export default function Clients() {
                                                             <option value="EMAIL">EMAIL</option>
                                                             <option value="SMM">SMM</option>
                                                             <option value="Development">Dev</option>
+                                                        </select> */}
+                                                        <select
+                                                            value={svc.type} // Assuming 'service.type' is how you track it in your map
+                                                            onChange={(e) => handleServiceChange(index, 'type', e.target.value)} // Adjust to match your onChange handler
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            required
+                                                        >
+                                                            <option value="" disabled>Select Service</option>
+                                                            {serviceTypes.map((st) => (
+                                                                <option key={st.id} value={st.name}>
+                                                                    {st.name}
+                                                                </option>
+                                                            ))}
                                                         </select>
                                                     </div>
                                                     <div className="col-span-1">

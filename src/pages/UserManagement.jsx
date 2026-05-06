@@ -97,6 +97,7 @@ export default function UserManagement() {
     };
 
     const { user: currentUser } = useAuth();
+    const isEditingSuperAdmin = editingUser?.role === "super_admin";
 
     const roles = [
         { value: 'super_admin', label: 'Super Admin' },
@@ -277,36 +278,37 @@ export default function UserManagement() {
                                         className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition-all font-bold text-gray-700"
                                     />
                                 </div>
-
-                                <div className="col-span-2">
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 italic">Advanced Access Control</label>
-                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                                        <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                                            <input type="checkbox" checked={formData.can_add === 1} onChange={(e) => setFormData({ ...formData, can_add: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-blue-600" />
-                                            <span className="text-xs font-bold text-gray-700 uppercase">Add Clients</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                                            <input type="checkbox" checked={formData.can_edit === 1} onChange={(e) => setFormData({ ...formData, can_edit: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-blue-600" />
-                                            <span className="text-xs font-bold text-gray-700 uppercase">Edit Clients</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
-                                            <input type="checkbox" checked={formData.can_delete === 1} onChange={(e) => setFormData({ ...formData, can_delete: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-rose-600" />
-                                            <span className="text-xs font-bold text-gray-700 uppercase">Delete Clients</span>
-                                        </div>
-
-                                        {availablePermissions.map(perm => (
-                                            <div key={perm.id} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-200 hover:border-blue-300 transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.permissions.includes(perm.id)}
-                                                    onChange={() => togglePermission(perm.id)}
-                                                    className="w-5 h-5 rounded-lg text-indigo-600"
-                                                />
-                                                <span className="text-xs font-bold text-gray-700 uppercase">{perm.label}</span>
+                                {!isEditingSuperAdmin && (
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 italic">Advanced Access Control</label>
+                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                            <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                                                <input type="checkbox" checked={formData.can_add === 1} onChange={(e) => setFormData({ ...formData, can_add: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-blue-600" />
+                                                <span className="text-xs font-bold text-gray-700 uppercase">Add Clients</span>
                                             </div>
-                                        ))}
+                                            <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                                                <input type="checkbox" checked={formData.can_edit === 1} onChange={(e) => setFormData({ ...formData, can_edit: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-blue-600" />
+                                                <span className="text-xs font-bold text-gray-700 uppercase">Edit Clients</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                                                <input type="checkbox" checked={formData.can_delete === 1} onChange={(e) => setFormData({ ...formData, can_delete: e.target.checked ? 1 : 0 })} className="w-5 h-5 rounded-lg text-rose-600" />
+                                                <span className="text-xs font-bold text-gray-700 uppercase">Delete Clients</span>
+                                            </div>
+
+                                            {availablePermissions.map(perm => (
+                                                <div key={perm.id} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-200 hover:border-blue-300 transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.permissions.includes(perm.id)}
+                                                        onChange={() => togglePermission(perm.id)}
+                                                        className="w-5 h-5 rounded-lg text-indigo-600"
+                                                    />
+                                                    <span className="text-xs font-bold text-gray-700 uppercase">{perm.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             <div className="flex gap-4 pt-4">

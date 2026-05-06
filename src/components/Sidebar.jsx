@@ -47,7 +47,8 @@ export default function Sidebar() {
 
     const menuItems = [
         { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-        ...(user?.role !== 'sales' ? [{ label: 'Projects', icon: Briefcase, path: '/projects' }] : []),
+        // ...(user?.role !== 'sales' ? [{ label: 'Projects', icon: Briefcase, path: '/projects' }] : []),
+        { label: 'Projects', icon: Briefcase, path: '/projects' },
         // ✅ Hide Clients
         ...(!blockedClientRoles.includes(user?.role)
             ? [{ label: 'Clients', icon: Users, path: '/clients' }]
@@ -57,7 +58,7 @@ export default function Sidebar() {
         ...(canManageUsers ? [
             { label: 'User Management', icon: ShieldCheck, path: '/users' },
         ] : []),
-        { label: 'Profile', icon: User, path: '/profile' },
+        //{ label: 'Profile', icon: User, path: '/profile' },
     ];
 
     return (

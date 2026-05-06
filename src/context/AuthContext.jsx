@@ -31,11 +31,19 @@ export const AuthProvider = ({ children }) => {
     const hasPermission = (perm) => {
         if (!user) return false;
         const role = user.role;
-        const isPrivileged = ['super_admin', 'sales', 'finance', 'admin', 'am_head', 'dev_manager'].includes(role);
+        const isPrivileged = ['super_admin', 'admin'].includes(role);
+        const isClientPrivileged = ['sales', 'finance', 'am_head', 'account_manager', 'marketing_manager', 'dev_manager'].includes(role);
 
         //default privileged access for certain permissions
         if (isPrivileged) {
             if (['assign_managers', 'view_all_clients', 'manage_staff', 'can_add', 'can_edit'].includes(perm)) {
+                return true;
+            }
+        }
+
+        //Client privileged access for certain permissions
+        if (isClientPrivileged) {
+            if (['assign_managers', 'view_all_clients', 'can_add', 'can_edit'].includes(perm)) {
                 return true;
             }
         }
