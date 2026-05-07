@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../lib/axios';
 import {
     ArrowLeft, Mail, Phone, Globe, ChevronDown, ChevronUp, User,
-    AlertCircle, Search, TrendingUp, Facebook, AtSign, MessageSquare,
+    Star, Search, TrendingUp, Facebook, AtSign, MessageSquare,
     Edit2, Trash2, Plus, X, Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -228,7 +228,7 @@ export default function ClientDetail() {
             case 'META': return <Facebook {...iconProps} />;
             case 'EMAIL': return <AtSign {...iconProps} />;
             case 'SMM': return <MessageSquare {...iconProps} />;
-            default: return <AlertCircle {...iconProps} />;
+            default: return <Star {...iconProps} />;
         }
     };
 
@@ -245,7 +245,7 @@ export default function ClientDetail() {
         return (
             <div className="flex-1 p-8">
                 <div className="text-center py-12">
-                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <Star className="w-16 h-16 text-red-400 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
                     <p className="text-gray-600 mb-4">{error}</p>
                     <button onClick={() => { setError(''); setLoading(true); fetchClientData(); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
@@ -260,7 +260,7 @@ export default function ClientDetail() {
         return (
             <div className="flex-1 p-8">
                 <div className="text-center py-12">
-                    <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <Star className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">Client not found</p>
                     <button onClick={() => navigate('/clients')} className="mt-4 text-blue-600 hover:underline">
                         Back to Clients
@@ -403,7 +403,7 @@ export default function ClientDetail() {
                         </div>
                         {client.agreement_status !== 'Signed' || client.invoice_status !== 'Paid' ? (
                             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-100">
-                                <AlertCircle className="w-4 h-4" />
+                                <Star className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-tight">Pending Finance Verification</span>
                             </div>
                         ) : (
@@ -559,7 +559,7 @@ export default function ClientDetail() {
                             {client.onboarding_pdf_url && (
                                 <div className="mt-4 p-2 bg-white rounded border border-green-200 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <AlertCircle className="w-4 h-4 text-green-600" />
+                                        <Star className="w-4 h-4 text-green-600" />
                                         <span className="text-[10px] text-gray-600 font-medium">Onboarding document attached:</span>
                                         <a href={client.onboarding_pdf_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 underline">View PDF</a>
                                     </div>

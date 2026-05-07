@@ -89,8 +89,17 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    // Function to instantly sync profile edits across the app and local storage
+    const updateUser = (updatedFields) => {
+        setUser((prevUser) => {
+            const newUser = { ...prevUser, ...updatedFields };
+            localStorage.setItem('user', JSON.stringify(newUser));
+            return newUser;
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, hasPermission }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, hasPermission, updateUser }}>
             {!loading && children}
         </AuthContext.Provider>
     );

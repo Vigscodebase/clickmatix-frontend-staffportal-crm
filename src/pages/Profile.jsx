@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from '../lib/axios';
-import { User, Mail, Briefcase, MapPin, Camera, Save, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Profile() {
-    const { user: authUser } = useAuth();
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState('');
+    // We now pull the new updateUser function from our context
+    const { user: authUser, updateUser } = useAuth();
+
+    const [profileData, setProfileData] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [imageError, setImageError] = useState("");
+    const fileInputRef = useRef(null);
+
     const [formData, setFormData] = useState({
         name: '',
-        location: 'WFO',
-        avatar_url: '',
-        password: ''
+        avatar_url: ''
     });
 
     useEffect(() => {
@@ -22,174 +23,210 @@ export default function Profile() {
 
     const fetchProfile = async () => {
         try {
-            const res = await axios.get('/api/profile');
-            if (res.data?.user) {
-                setUser(res.data.user);
-                setFormData({
-                    name: res.data.user.name,
-                    location: res.data.user.location || 'WFO',
-                    avatar_url: res.data.user.avatar_url || '',
-                    password: ''
-                });
-            } else {
-                setMessage('Error: User not found');
-            }
-        } catch (err) {
-            console.error('Failed to fetch profile', err);
-            setMessage('Failed to load profile');
-        } finally {
-            setLoading(false);
+            const response = await axios.get('/api/profile');
+            const userData = response.data.user;
+            setProfileData(userData);
+            setFormData({
+                name: userData.name || '',
+                avatar_url: userData.avatar_url || ''
+            });
+        } catch (error) {
+            console.error("Error fetching profile:", error);
         }
+    };
+
+    const handleImageClick = () => {
+        if (isEditing && fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 200 * 1024) {
+            setImageError("File size must be under 200 KB");
+            return;
+        }
+
+        setImageError("");
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData({ ...formData, avatar_url: reader.result });
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
-        setSaving(true);
-        setMessage('');
+        setIsSaving(true);
         try {
             await axios.put('/api/profile', formData);
-            setMessage('Profile updated successfully!');
-            setTimeout(() => setMessage(''), 3000);
+            setIsEditing(false);
             fetchProfile();
-        } catch (err) {
-            console.error('Failed to update profile', err);
-            setMessage('Error updating profile');
+
+            // NEW: Instantly update the sidebar and global context with the new data!
+            if (updateUser) {
+                updateUser({
+                    name: formData.name,
+                    avatar_url: formData.avatar_url
+                });
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            alert("Failed to update profile.");
         } finally {
-            setSaving(false);
+            setIsSaving(false);
         }
     };
 
-    if (loading) {
+    if (!profileData) {
         return (
-            <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <div className="flex items-center justify-center h-full pt-20">
+                <p className="text-gray-500 font-medium">Loading profile...</p>
             </div>
         );
     }
+
+    const onboardingDate = profileData.created_at
+        ? new Date(profileData.created_at).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        })
+        : 'Date not recorded';
+
+    const formatRole = (roleStr) => {
+        if (!roleStr) return 'Unknown Role';
+        return roleStr.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    };
 
     return (
-        <>
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">User Profile</h1>
-                <p className="text-gray-500 mt-1">Manage your personal information and preferences.</p>
+        <div className="max-w-3xl mx-auto mt-10 p-6 sm:p-10 bg-white rounded-xl shadow-sm border border-gray-100">
+            <h1 className="text-2xl font-bold mb-8 text-gray-800">My Profile</h1>
+
+            <div className="flex items-center space-x-6 mb-8 border-b border-gray-100 pb-8">
+                <div className="flex flex-col items-center">
+                    <div
+                        className={`relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-blue-50 flex-shrink-0 shadow-sm transition-all ${isEditing ? 'cursor-pointer hover:border-blue-200' : ''}`}
+                        onClick={handleImageClick}
+                        title={isEditing ? "Click to change profile picture" : ""}
+                    >
+                        {formData.avatar_url ? (
+                            <img
+                                src={formData.avatar_url}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.onerror = null; e.target.src = ''; }}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-blue-400 text-3xl font-bold bg-blue-50">
+                                {formData.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+
+                        {isEditing && (
+                            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center transition-opacity hover:bg-opacity-50">
+                                <svg className="w-8 h-8 text-white opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        className="hidden"
+                    />
+
+                    {imageError && (
+                        <p className="mt-2 text-xs text-red-500 font-medium text-center">{imageError}</p>
+                    )}
+                </div>
+
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 tracking-tight">{profileData.name}</h2>
+                    <p className="text-sm font-medium text-blue-600 bg-blue-50 inline-block px-3 py-1 rounded-full mt-2">
+                        {formatRole(profileData.role)}
+                    </p>
+                    <p className="text-sm text-gray-500 font-medium mt-3">
+                        On boarding date - <span className="text-gray-700">{onboardingDate}</span>
+                    </p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-1">
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden text-center p-8">
-                                <div className="relative inline-block mb-4">
-                                    <div className="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-4xl font-bold border-4 border-white shadow-lg overflow-hidden">
-                                        {formData.avatar_url ? (
-                                            <img src={formData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                        ) : (
-                                            user?.name?.charAt(0)
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            const url = prompt('Enter image URL for avatar:', formData.avatar_url);
-                                            if (url !== null) setFormData({ ...formData, avatar_url: url });
-                                        }}
-                                        className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors"
-                                    >
-                                        <Camera className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-900">{user?.name}</h2>
-                                <p className="text-sm text-gray-500 font-medium uppercase tracking-widest mt-1">
-                                    {user?.role?.replace('_', ' ')}
-                                </p>
-                                <div className="mt-6 space-y-3 text-left">
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Mail className="w-4 h-4 text-gray-400" />
-                                        <span>{user?.email}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <Briefcase className="w-4 h-4 text-gray-400" />
-                                        <span>{user?.department}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <MapPin className="w-4 h-4 text-gray-400" />
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${formData.location === 'WFH' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                            {formData.location}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Edit Form */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                                <h3 className="text-lg font-bold text-gray-900 mb-6">Edit Information</h3>
-                                {message && (
-                                    <div className={`mb-6 p-4 rounded-xl flex items-center gap-2 text-sm font-medium ${message.includes('Error') ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
-                                        <CheckCircle className="w-5 h-5" />
-                                        {message}
-                                    </div>
-                                )}
-                                <form onSubmit={handleSave} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email (Read Only)</label>
-                                            <input
-                                                type="email"
-                                                disabled
-                                                value={user?.email || ''}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 text-gray-500 cursor-not-allowed"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password (leave blank to keep)</label>
-                                            <input
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                                                placeholder="Enter new password"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Work Location</label>
-                                            <div className="flex gap-2">
-                                                {['WFO', 'WFH'].map((loc) => (
-                                                    <button
-                                                        key={loc}
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, location: loc })}
-                                                        className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all ${formData.location === loc ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-100' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
-                                                    >
-                                                        {loc}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-4">
-                                        <button
-                                            type="submit"
-                                            disabled={saving}
-                                            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 font-bold disabled:opacity-50"
-                                        >
-                                            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                            Save Changes
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+            <form onSubmit={handleSave} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            disabled={!isEditing}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 transition-colors"
+                            required
+                        />
                     </div>
-            </>
-        );
-    }
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                        <input
+                            type="email"
+                            value={profileData.email || ''}
+                            disabled
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">User Role</label>
+                        <input
+                            type="text"
+                            value={formatRole(profileData.role)}
+                            disabled
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
+                    </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-gray-100 flex justify-end space-x-4">
+                    {isEditing ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsEditing(false);
+                                    setImageError("");
+                                    setFormData({ name: profileData.name, avatar_url: profileData.avatar_url || '' });
+                                }}
+                                className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSaving || imageError !== ""}
+                                className="px-5 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 shadow-sm"
+                            >
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setIsEditing(true)}
+                            className="px-5 py-2.5 text-sm font-medium bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors shadow-sm"
+                        >
+                            Edit Profile
+                        </button>
+                    )}
+                </div>
+            </form>
+        </div>
+    );
+}

@@ -58,7 +58,7 @@ export default function Sidebar() {
         ...(canManageUsers ? [
             { label: 'User Management', icon: ShieldCheck, path: '/users' },
         ] : []),
-        //{ label: 'Profile', icon: User, path: '/profile' },
+        { label: 'Profile', icon: User, path: '/profile' },
     ];
 
     return (
@@ -106,9 +106,16 @@ export default function Sidebar() {
 
             <div className="p-4 border-t border-gray-800 bg-gray-900/50">
                 <div className="flex items-center gap-3 px-4 py-3 mb-4 bg-gray-800/40 rounded-2xl border border-gray-800">
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold shadow-inner">
+                    {/* <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold shadow-inner">
                         {user?.name?.charAt(0) || 'U'}
-                    </div>
+                    </div> */}
+                    {user?.avatar_url ? (
+                        <img src={user.avatar_url} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
+                            {user?.name?.charAt(0).toUpperCase()}
+                        </div>
+                    )}
                     <div className="flex-1 overflow-hidden">
                         <p className="text-sm font-semibold truncate text-white">{user?.name || 'User'}</p>
                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">

@@ -388,101 +388,122 @@ export default function Clients() {
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            {formData.services.map((svc, index) => (
-                                                <div key={index} className="grid grid-cols-5 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 items-end">
-                                                    <div className="col-span-1">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Service Type</label>
-                                                        {/* <select
-                                                            value={svc.type}
-                                                            onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
-                                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                                                        >
-                                                            <option value="SEO">SEO</option>
-                                                            <option value="G-ADS">G-ADS</option>
-                                                            <option value="META">META</option>
-                                                            <option value="EMAIL">EMAIL</option>
-                                                            <option value="SMM">SMM</option>
-                                                            <option value="Development">Dev</option>
-                                                        </select> */}
-                                                        <select
-                                                            value={svc.type} // Assuming 'service.type' is how you track it in your map
-                                                            onChange={(e) => handleServiceChange(index, 'type', e.target.value)} // Adjust to match your onChange handler
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            required
-                                                        >
-                                                            <option value="" disabled>Select Service</option>
-                                                            {serviceTypes.map((st) => (
-                                                                <option key={st.id} value={st.name}>
-                                                                    {st.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</label>
-                                                        <input
-                                                            type="number"
-                                                            value={svc.fee}
-                                                            onChange={(e) => handleServiceChange(index, 'fee', e.target.value)}
-                                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                                                            placeholder="0.00"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ad Spend</label>
-                                                        <input
-                                                            type="number"
-                                                            value={svc.spend}
-                                                            onChange={(e) => handleServiceChange(index, 'spend', e.target.value)}
-                                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                                                            placeholder="0.00"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-1">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rev Type</label>
-                                                        <select
-                                                            value={svc.revenue_type}
-                                                            onChange={(e) => handleServiceChange(index, 'revenue_type', e.target.value)}
-                                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                                                        >
-                                                            <option value="Recurring">Recurring</option>
-                                                            <option value="One-off">One-off</option>
-                                                        </select>
-                                                    </div>
-                                                    {svc.revenue_type === 'One-off' && (
+                                            {formData.services.map((svc, index) => {
+                                                // 1. Check which conditional fields should be visible for THIS row
+                                                const showAdSpend = svc.type === 'G-ADS' || svc.type === 'META';
+
+                                                // Check if Rev Type is "Recurring" to show the Date field
+                                                const showDate = svc.revenue_type === 'Recurring';
+
+                                                // 2. Calculate the exact number of columns needed (Base 5 + conditionals)
+                                                let colCount = 5;
+                                                if (showAdSpend) colCount++;
+                                                if (showDate) colCount++;
+
+                                                // 3. Map to the exact Tailwind class
+                                                const gridColsClass = colCount === 5 ? 'grid-cols-5' : colCount === 6 ? 'grid-cols-6' : 'grid-cols-7';
+
+                                                return (
+                                                    <div key={index} className={`grid ${gridColsClass} gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 items-end transition-all duration-300`}>
+
+                                                        {/* 1. Service Type */}
                                                         <div className="col-span-1">
-                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Month</label>
+                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Service Type</label>
+                                                            <select
+                                                                value={svc.type}
+                                                                onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                required
+                                                            >
+                                                                <option value="" disabled>Select Service</option>
+                                                                {serviceTypes.map((st) => (
+                                                                    <option key={st.id} value={st.name}>
+                                                                        {st.name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        {/* 2. Monthly Fee */}
+                                                        <div className="col-span-1">
+                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</label>
                                                             <input
-                                                                type="month"
-                                                                value={svc.revenue_month}
-                                                                onChange={(e) => handleServiceChange(index, 'revenue_month', e.target.value)}
+                                                                type="number"
+                                                                value={svc.fee}
+                                                                onChange={(e) => handleServiceChange(index, 'fee', e.target.value)}
                                                                 className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                placeholder="0.00"
                                                             />
                                                         </div>
-                                                    )}
-                                                    <div className="col-span-1">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
-                                                        <select
-                                                            disabled={user?.role === 'sales'}
-                                                            value={svc.tl_id}
-                                                            onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
-                                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none disabled:bg-gray-50"
-                                                        >
-                                                            <option value="">Select TL</option>
-                                                            {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
-                                                        </select>
+
+                                                        {/* 3. Ad Spend (Conditional) */}
+                                                        {showAdSpend && (
+                                                            <div className="col-span-1 animate-in fade-in zoom-in duration-200">
+                                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ad Spend</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={svc.spend}
+                                                                    onChange={(e) => handleServiceChange(index, 'spend', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {/* 4. Rev Type */}
+                                                        <div className="col-span-1">
+                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rev Type</label>
+                                                            <select
+                                                                value={svc.revenue_type}
+                                                                onChange={(e) => handleServiceChange(index, 'revenue_type', e.target.value)}
+                                                                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                            >
+                                                                <option value="Recurring">Recurring</option>
+                                                                <option value="One-off">One-off</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* 5. Date (Conditional - Only for Recurring) */}
+                                                        {showDate && (
+                                                            <div className="col-span-1 animate-in fade-in zoom-in duration-200">
+                                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Date</label>
+                                                                <input
+                                                                    type="date"
+                                                                    value={svc.revenue_month}
+                                                                    onChange={(e) => handleServiceChange(index, 'revenue_month', e.target.value)}
+                                                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {/* 6. Team Lead */}
+                                                        <div className="col-span-1">
+                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
+                                                            <select
+                                                                disabled={user?.role === 'sales'}
+                                                                value={svc.tl_id}
+                                                                onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
+                                                                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                                            >
+                                                                <option value="">Select TL</option>
+                                                                {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
+                                                            </select>
+                                                        </div>
+
+                                                        {/* 7. Delete Button */}
+                                                        <div className="col-span-1 flex justify-end pb-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveService(index)}
+                                                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+
                                                     </div>
-                                                    <div className="col-span-1 flex justify-end">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleRemoveService(index)}
-                                                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
