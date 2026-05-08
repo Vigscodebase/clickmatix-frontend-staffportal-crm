@@ -70,6 +70,7 @@ export default function ClientDetail() {
                 setError('Client not found');
                 return;
             }
+
             setClient(res.data.client);
             setServices(res.data.services || []);
             setEditingClient({
@@ -86,7 +87,7 @@ export default function ClientDetail() {
                 invoice_status: res.data.client.invoice_status || 'Pending',
                 recurring_day: res.data.client.recurring_day || 1,
                 onboarding_date: res.data.client.onboarding_date || '',
-                onboarding_pdf_url: res.data.client.onboarding_pdf_url || ''
+                onboarding_pdf_url: res.data.client.onboarding_pdf_url || '',
             });
         } catch (err) {
             console.error('Failed to fetch client', err);
@@ -118,7 +119,19 @@ export default function ClientDetail() {
 
     const handleUpdateFinanceStatus = async (field, value) => {
         try {
-            await axios.patch(`/api/clients/${id}/finance`, { [field]: value });
+            // 1. Figure out what the new combination of statuses will be
+            const newAgreementStatus = field === 'agreement_status' ? value : client.agreement_status;
+            const newInvoiceStatus = field === 'invoice_status' ? value : client.invoice_status;
+
+            // 2. If both are complete, it's Active. Otherwise, it goes back to Pending.
+            const newClientStatus = (newAgreementStatus === 'Signed' && newInvoiceStatus === 'Paid') ? 'Active' : 'Pending';
+
+            // 3. Send BOTH the updated dropdown field and the newly calculated status
+            await axios.patch(`/api/clients/${id}/finance`, {
+                [field]: value,
+                status: newClientStatus
+            });
+
             fetchClientData();
         } catch (err) {
             alert('Failed to update finance status');
@@ -200,15 +213,21 @@ export default function ClientDetail() {
     const canViewRevenue = hasPermission('view_revenue');
 
     const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
-    const isAMHead = user?.role === 'am_head';
+    const isAMHead = user?.role === 'am_head' || user?.role === 'account_manager';
     const isMM = user?.role === 'marketing_manager';
     const isDM = user?.role === 'dev_manager';
     const isSales = user?.role === 'sales';
+    const isFinance = user?.role === 'finance';
 
-    const canEditAM = isSuperAdmin || isAMHead;
-    const canEditMM = isSuperAdmin || isMM;
-    const canEditDM = isSuperAdmin || isDM;
-    const canEditTL = isSuperAdmin || isMM || isDM;
+    // const canEditAM = isSuperAdmin || isAMHead || isFinance;
+    // const canEditMM = isSuperAdmin || isMM || isFinance;
+    // const canEditDM = isSuperAdmin || isDM || isFinance;
+    // const canEditTL = isSuperAdmin || isMM || isDM || isFinance;
+    // const canEditAM = isSuperAdmin || isMM || isDM || isFinance;
+    const canEditMM = isSuperAdmin || isFinance;
+    const canEditDM = isSuperAdmin || isFinance;
+    const canEditTL = isSuperAdmin || isFinance;
+    const canEditAM = isSuperAdmin || isFinance;
     const canEditBasicInfo = isSuperAdmin;
 
     const getTrafficLightColor = (status) => {
@@ -269,7 +288,7 @@ export default function ClientDetail() {
             </div>
         );
     }
-
+    console.log(client.am_head_id != null || client.marketing_manager_id != null || client.dev_manager_id != null)
     return (
         <div className="p-8">
             <button onClick={() => navigate('/clients')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
@@ -331,9 +350,17 @@ export default function ClientDetail() {
                                 <Trash2 className="w-5 h-5" />
                             </button>
                         )}
-                        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-200">
-                            {client.status || 'Active'}
-                        </span>
+                        {client.status === 'Pending' ? (
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium border bg-rose-100 text-rose-700 border-rose-200`}>
+                                {client.status}
+                            </span>)
+                            :
+                            (
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium border bg-green-100 text-green-700 border-green-200`}>
+                                    {client.status}
+                                </span>
+                            )
+                        }
                     </div>
                 </div>
 
@@ -344,8 +371,8 @@ export default function ClientDetail() {
                             {[
                                 { label: 'Sales Handover', done: true },
                                 { label: 'Finance Review', done: client.agreement_status === 'Signed' && client.invoice_status === 'Paid' },
-                                { label: 'Head Assignment', done: client.account_manager_id && (client.marketing_manager_id || client.dev_manager_id) },
-                                { label: 'Onboarding', done: !!client.onboarding_date },
+                                { label: 'Head Assignment', done: client.am_head_id !== null || client.marketing_manager_id !== null || client.dev_manager_id !== null },
+                                { label: 'Onboarding', done: services.length > 0 && services.every(s => s.tl_id) },
                                 { label: 'Execution', done: services.length > 0 && services.every(s => s.tl_id) }
                             ].map((step, idx) => (
                                 <div key={idx} className="flex flex-col items-center gap-2 relative z-10">
@@ -365,7 +392,7 @@ export default function ClientDetail() {
                             <div>
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Agreement Status</p>
                                 <div className="flex items-center gap-2">
-                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${client.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${client.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
                                         {client.agreement_status || 'Pending'}
                                     </span>
                                     {canApproveFinance && (
@@ -401,7 +428,7 @@ export default function ClientDetail() {
                                 </div>
                             </div>
                         </div>
-                        {client.agreement_status !== 'Signed' || client.invoice_status !== 'Paid' ? (
+                        {client.status === 'Pending' ? (
                             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-100">
                                 <Star className="w-4 h-4" />
                                 <span className="text-xs font-bold uppercase tracking-tight">Pending Finance Verification</span>
@@ -414,7 +441,7 @@ export default function ClientDetail() {
                         )}
                     </div>
 
-                    {canApproveFinance && (
+                    {canApproveFinance && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                             <div>
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Marketing Manager</label>
@@ -761,13 +788,13 @@ export default function ClientDetail() {
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
                                     <select
-                                        disabled={!isSuperAdmin || isSales}
+                                        disabled={!canEditAM || isSales}
                                         value={editingClient.am_head_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, am_head_id: e.target.value })}
                                         className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none disabled:bg-gray-50"
                                     >
                                         <option value="">Select AM Head</option>
-                                        {staff.filter(s => s.role === 'am_head').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        {staff.filter(s => s.role === 'am_head' || s.role === 'account_manager').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
                             </div>

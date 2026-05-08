@@ -480,7 +480,7 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
                                                             <select
-                                                                disabled={user?.role === 'sales'}
+                                                                disabled={user?.role === 'sales' || user?.role === 'finance' || user?.role === 'seo_specialist' || user?.role === 'ads_specialist' || user?.role === 'staff'}
                                                                 value={svc.tl_id}
                                                                 onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
                                                                 className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none disabled:bg-gray-50"
