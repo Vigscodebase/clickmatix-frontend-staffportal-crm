@@ -221,10 +221,17 @@ export default function Clients() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-700 border border-green-200/50">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                {client.status || 'Active'}
-                                            </span>
+                                            {client.status === 'Pending' ? (
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-rose-100 text-rose-700 border-rose-200`}>
+                                                    {client.status}
+                                                </span>)
+                                                :
+                                                (
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-green-100 text-green-700 border-green-200`}>
+                                                        {client.status}
+                                                    </span>
+                                                )
+                                            }
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-all" />

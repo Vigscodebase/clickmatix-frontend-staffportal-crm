@@ -103,9 +103,9 @@ export default function Dashboard() {
                             onChange={(e) => setSelectedMonth(e.target.value)}
                             className="text-sm font-bold bg-transparent outline-none text-gray-700 w-full cursor-pointer z-10"
                         />
-                        <div className="absolute right-3 pointer-events-none">
+                        {/* <div className="absolute right-3 pointer-events-none">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </div>

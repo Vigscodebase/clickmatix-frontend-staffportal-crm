@@ -34,7 +34,7 @@ export default function ClientDetail() {
     });
 
     const [editingService, setEditingService] = useState({
-        id: null, type: 'SEO', monthly_fee: 0, ad_spend: 0, tl_id: '', status: 'Active'
+        id: null, type: '', monthly_fee: 0, ad_spend: 0, tl_id: '', status: 'Active', revenue_type: 'Recurring', revenue_month: ''
     });
 
     useEffect(() => {
@@ -209,8 +209,6 @@ export default function ClientDetail() {
     const canEdit = hasPermission('can_edit');
     const canDelete = hasPermission('can_delete');
     const canApproveFinance = hasPermission('approve_finance');
-    const canAssignManagers = hasPermission('assign_managers');
-    const canViewRevenue = hasPermission('view_revenue');
 
     const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
     const isAMHead = user?.role === 'am_head' || user?.role === 'account_manager';
@@ -219,16 +217,10 @@ export default function ClientDetail() {
     const isSales = user?.role === 'sales';
     const isFinance = user?.role === 'finance';
 
-    // const canEditAM = isSuperAdmin || isAMHead || isFinance;
-    // const canEditMM = isSuperAdmin || isMM || isFinance;
-    // const canEditDM = isSuperAdmin || isDM || isFinance;
-    // const canEditTL = isSuperAdmin || isMM || isDM || isFinance;
-    // const canEditAM = isSuperAdmin || isMM || isDM || isFinance;
     const canEditMM = isSuperAdmin || isFinance;
     const canEditDM = isSuperAdmin || isFinance;
     const canEditTL = isSuperAdmin || isFinance;
     const canEditAM = isSuperAdmin || isFinance;
-    const canEditBasicInfo = isSuperAdmin;
 
     const getTrafficLightColor = (status) => {
         if (!status) return 'bg-gray-300';
@@ -250,6 +242,9 @@ export default function ClientDetail() {
             default: return <Star {...iconProps} />;
         }
     };
+
+    // UNIFIED INPUT CLASS FOR PERFECT ALIGNMENT IN MODALS
+    const unifiedInputClass = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
 
     if (loading) {
         return (
@@ -288,7 +283,7 @@ export default function ClientDetail() {
             </div>
         );
     }
-    console.log(client.am_head_id != null || client.marketing_manager_id != null || client.dev_manager_id != null)
+
     return (
         <div className="p-8">
             <button onClick={() => navigate('/clients')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
@@ -604,7 +599,7 @@ export default function ClientDetail() {
                     {canEdit && (
                         <button
                             onClick={() => {
-                                setEditingService({ id: null, type: 'SEO', monthly_fee: 0, ad_spend: 0, tl_id: '', status: 'Active', revenue_type: 'Recurring', revenue_month: '' });
+                                setEditingService({ id: null, type: '', monthly_fee: 0, ad_spend: 0, tl_id: '', status: 'Active', revenue_type: 'Recurring', revenue_month: '' });
                                 setServiceModalOpen(true);
                             }}
                             className="flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
@@ -656,7 +651,7 @@ export default function ClientDetail() {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {canEdit && (
+                                        {(user?.role === 'account_manager' || user?.role === 'am_head') && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -719,7 +714,7 @@ export default function ClientDetail() {
                                         type="text" required
                                         value={editingClient.name}
                                         onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
+                                        className={unifiedInputClass}
                                     />
                                 </div>
                                 <div className="col-span-2">
@@ -728,7 +723,7 @@ export default function ClientDetail() {
                                         type="text"
                                         value={editingClient.domain}
                                         onChange={(e) => setEditingClient({ ...editingClient, domain: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
+                                        className={unifiedInputClass}
                                     />
                                 </div>
                                 <div>
@@ -737,7 +732,7 @@ export default function ClientDetail() {
                                         type="email"
                                         value={editingClient.email}
                                         onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
+                                        className={unifiedInputClass}
                                     />
                                 </div>
                                 <div>
@@ -746,7 +741,7 @@ export default function ClientDetail() {
                                         type="text"
                                         value={editingClient.phone}
                                         onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none"
+                                        className={unifiedInputClass}
                                     />
                                 </div>
                                 <div className="col-span-2">
@@ -755,7 +750,7 @@ export default function ClientDetail() {
                                         disabled={!canEditAM || isSales}
                                         value={editingClient.account_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, account_manager_id: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
                                         <option value="">Select Manager</option>
                                         {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
@@ -767,7 +762,7 @@ export default function ClientDetail() {
                                         disabled={!canEditMM || isSales}
                                         value={editingClient.marketing_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, marketing_manager_id: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
                                         <option value="">Select Manager</option>
                                         {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
@@ -779,7 +774,7 @@ export default function ClientDetail() {
                                         disabled={!canEditDM || isSales}
                                         value={editingClient.dev_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, dev_manager_id: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
                                         <option value="">Select Manager</option>
                                         {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
@@ -788,13 +783,13 @@ export default function ClientDetail() {
                                 <div className="col-span-2">
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
                                     <select
-                                        disabled={!canEditAM || isSales}
+                                        disabled={!isSuperAdmin || isSales}
                                         value={editingClient.am_head_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, am_head_id: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
                                         <option value="">Select AM Head</option>
-                                        {staff.filter(s => s.role === 'am_head' || s.role === 'account_manager').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        {staff.filter(s => s.role === 'am_head').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -821,29 +816,12 @@ export default function ClientDetail() {
                         <form onSubmit={handleSaveService} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Service Type</label>
-                                {/* <select
-                                    value={editingService.type}
-                                    onChange={(e) => setEditingService({ ...editingService, type: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
-                                    disabled={!isSuperAdmin && (isMM || isDM) && editingService.id}
-                                >
-                                    {(isSuperAdmin || isMM) && (
-                                        <>
-                                            <option value="SEO">SEO</option>
-                                            <option value="G-ADS">G-ADS</option>
-                                            <option value="META">META</option>
-                                            <option value="EMAIL">EMAIL</option>
-                                            <option value="SMM">SMM</option>
-                                        </>
-                                    )}
-                                    {(isSuperAdmin || isDM) && <option value="Development">Development</option>}
-                                </select> */}
 
                                 <select
                                     name="type"
-                                    value={editingService.type || ''} // Adjust variable name based on your state
-                                    onChange={(e) => setEditingService({ ...editingService, type: e.target.value })} // Adjust to match your onChange handler
-                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={editingService.type || ''}
+                                    onChange={(e) => setEditingService({ ...editingService, type: e.target.value })}
+                                    className={unifiedInputClass}
                                     required
                                 >
                                     <option value="" disabled>Select Service Type</option>
@@ -862,18 +840,21 @@ export default function ClientDetail() {
                                         type="number"
                                         value={editingService.monthly_fee}
                                         onChange={(e) => setEditingService({ ...editingService, monthly_fee: parseFloat(e.target.value) })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+                                        className={unifiedInputClass}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Ad Spend</label>
-                                    <input
-                                        type="number"
-                                        value={editingService.ad_spend}
-                                        onChange={(e) => setEditingService({ ...editingService, ad_spend: parseFloat(e.target.value) })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
-                                    />
-                                </div>
+                                {/* CONDITIONAL AD SPEND HERE */}
+                                {(editingService.type === 'G-ADS' || editingService.type === 'META') && (
+                                    <div className="animate-in fade-in zoom-in duration-200">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Ad Spend</label>
+                                        <input
+                                            type="number"
+                                            value={editingService.ad_spend}
+                                            onChange={(e) => setEditingService({ ...editingService, ad_spend: parseFloat(e.target.value) })}
+                                            className={unifiedInputClass}
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Team Lead</label>
@@ -881,7 +862,7 @@ export default function ClientDetail() {
                                     disabled={!canEditTL || isSales}
                                     value={editingService.tl_id}
                                     onChange={(e) => setEditingService({ ...editingService, tl_id: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none disabled:bg-gray-50"
+                                    className={`${unifiedInputClass} disabled:bg-gray-50`}
                                 >
                                     <option value="">Select TL</option>
                                     {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
@@ -892,7 +873,7 @@ export default function ClientDetail() {
                                 <select
                                     value={editingService.status}
                                     onChange={(e) => setEditingService({ ...editingService, status: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+                                    className={unifiedInputClass}
                                 >
                                     <option value="Active">Active</option>
                                     <option value="Pause">Pause</option>
@@ -905,20 +886,20 @@ export default function ClientDetail() {
                                     <select
                                         value={editingService.revenue_type || 'Recurring'}
                                         onChange={(e) => setEditingService({ ...editingService, revenue_type: e.target.value })}
-                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+                                        className={unifiedInputClass}
                                     >
                                         <option value="Recurring">Recurring</option>
                                         <option value="One-off">One-off</option>
                                     </select>
                                 </div>
-                                {editingService.revenue_type === 'One-off' && (
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Revenue Month</label>
+                                {editingService.revenue_type === 'Recurring' && (
+                                    <div className="flex-1 animate-in fade-in zoom-in duration-200">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Date</label>
                                         <input
-                                            type="month"
+                                            type="date"
                                             value={editingService.revenue_month || ''}
                                             onChange={(e) => setEditingService({ ...editingService, revenue_month: e.target.value })}
-                                            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+                                            className={unifiedInputClass}
                                         />
                                     </div>
                                 )}
