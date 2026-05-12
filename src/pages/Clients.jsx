@@ -16,14 +16,7 @@ export default function Clients() {
     const [serviceTypes, setServiceTypes] = useState([]);
 
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        domain: '',
-        am_id: '',
-        mm_id: '',
-        dm_id: '',
-        services: []
+        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: []
     });
 
     const navigate = useNavigate();
@@ -106,6 +99,17 @@ export default function Clients() {
 
     const canAdd = hasPermission('can_add');
 
+    const getStatusColor = (status) => {
+        const s = (status || '').toLowerCase();
+        if (s === 'active') return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' };
+        if (s === 'pause' || s === 'pending') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
+        if (s === 'hold') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' };
+        return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
+    };
+
+    // FIX: ADDED h-10 TO FORCE ALL INPUTS AND SELECTS TO BE EXACTLY THE SAME HEIGHT
+    const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
+
     return (
         <>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -114,7 +118,6 @@ export default function Clients() {
                     <p className="text-gray-500 mt-1">Full list of clients and managed services.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {/* Team/Mine Toggle for AM Head and Admins */}
                     {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
@@ -221,17 +224,15 @@ export default function Clients() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {client.status === 'Pending' ? (
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-rose-100 text-rose-700 border-rose-200`}>
-                                                    {client.status}
-                                                </span>)
-                                                :
-                                                (
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-green-100 text-green-700 border-green-200`}>
-                                                        {client.status}
+                                            {(() => {
+                                                const colors = getStatusColor(client.status);
+                                                return (
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${colors.bg} ${colors.text} ${colors.border}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`}></span>
+                                                        {client.status || 'Active'}
                                                     </span>
-                                                )
-                                            }
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-all" />
@@ -285,7 +286,7 @@ export default function Clients() {
                                                 required
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                                className={unifiedInputClass}
                                                 placeholder="Company Name"
                                             />
                                         </div>
@@ -295,7 +296,7 @@ export default function Clients() {
                                                 type="text"
                                                 value={formData.domain}
                                                 onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                                className={unifiedInputClass}
                                                 placeholder="e.g. clickmatix.com"
                                             />
                                         </div>
@@ -306,7 +307,7 @@ export default function Clients() {
                                                     type="email"
                                                     value={formData.email}
                                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                                    className={unifiedInputClass}
                                                     placeholder="contact@client.com"
                                                 />
                                             </div>
@@ -316,7 +317,7 @@ export default function Clients() {
                                                     type="text"
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                                    className={unifiedInputClass}
                                                     placeholder="Phone Number"
                                                 />
                                             </div>
@@ -334,7 +335,7 @@ export default function Clients() {
                                                 disabled={user?.role === 'sales'}
                                                 value={formData.am_id}
                                                 onChange={(e) => setFormData({ ...formData, am_id: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all disabled:bg-gray-50"
+                                                className={`${unifiedInputClass} disabled:bg-gray-50`}
                                             >
                                                 <option value="">Select Manager</option>
                                                 {staff.filter(s => s.role === 'am_head' || s.role === 'account_manager' || s.department === 'Sales').map(s => (
@@ -348,7 +349,7 @@ export default function Clients() {
                                                 disabled={user?.role === 'sales'}
                                                 value={formData.mm_id}
                                                 onChange={(e) => setFormData({ ...formData, mm_id: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all disabled:bg-gray-50"
+                                                className={`${unifiedInputClass} disabled:bg-gray-50`}
                                             >
                                                 <option value="">Select Manager</option>
                                                 {staff.filter(s => s.department === 'Marketing' || s.role === 'marketing_manager').map(s => (
@@ -362,7 +363,7 @@ export default function Clients() {
                                                 disabled={user?.role === 'sales'}
                                                 value={formData.dm_id}
                                                 onChange={(e) => setFormData({ ...formData, dm_id: e.target.value })}
-                                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all disabled:bg-gray-50"
+                                                className={`${unifiedInputClass} disabled:bg-gray-50`}
                                             >
                                                 <option value="">Select Manager</option>
                                                 {staff.filter(s => s.department === 'Development' || s.role === 'dev_manager').map(s => (
@@ -396,18 +397,13 @@ export default function Clients() {
                                     ) : (
                                         <div className="space-y-3">
                                             {formData.services.map((svc, index) => {
-                                                // 1. Check which conditional fields should be visible for THIS row
                                                 const showAdSpend = svc.type === 'G-ADS' || svc.type === 'META';
-
-                                                // Check if Rev Type is "Recurring" to show the Date field
                                                 const showDate = svc.revenue_type === 'Recurring';
 
-                                                // 2. Calculate the exact number of columns needed (Base 5 + conditionals)
                                                 let colCount = 5;
                                                 if (showAdSpend) colCount++;
                                                 if (showDate) colCount++;
 
-                                                // 3. Map to the exact Tailwind class
                                                 const gridColsClass = colCount === 5 ? 'grid-cols-5' : colCount === 6 ? 'grid-cols-6' : 'grid-cols-7';
 
                                                 return (
@@ -419,7 +415,7 @@ export default function Clients() {
                                                             <select
                                                                 value={svc.type}
                                                                 onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                className={unifiedInputClass}
                                                                 required
                                                             >
                                                                 <option value="" disabled>Select Service</option>
@@ -438,7 +434,7 @@ export default function Clients() {
                                                                 type="number"
                                                                 value={svc.fee}
                                                                 onChange={(e) => handleServiceChange(index, 'fee', e.target.value)}
-                                                                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                className={unifiedInputClass}
                                                                 placeholder="0.00"
                                                             />
                                                         </div>
@@ -451,7 +447,7 @@ export default function Clients() {
                                                                     type="number"
                                                                     value={svc.spend}
                                                                     onChange={(e) => handleServiceChange(index, 'spend', e.target.value)}
-                                                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                    className={unifiedInputClass}
                                                                     placeholder="0.00"
                                                                 />
                                                             </div>
@@ -463,7 +459,7 @@ export default function Clients() {
                                                             <select
                                                                 value={svc.revenue_type}
                                                                 onChange={(e) => handleServiceChange(index, 'revenue_type', e.target.value)}
-                                                                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                className={unifiedInputClass}
                                                             >
                                                                 <option value="Recurring">Recurring</option>
                                                                 <option value="One-off">One-off</option>
@@ -478,7 +474,7 @@ export default function Clients() {
                                                                     type="date"
                                                                     value={svc.revenue_month}
                                                                     onChange={(e) => handleServiceChange(index, 'revenue_month', e.target.value)}
-                                                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none"
+                                                                    className={unifiedInputClass}
                                                                 />
                                                             </div>
                                                         )}
@@ -487,10 +483,10 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
                                                             <select
-                                                                disabled={user?.role === 'sales' || user?.role === 'finance' || user?.role === 'seo_specialist' || user?.role === 'ads_specialist' || user?.role === 'staff'}
+                                                                disabled={user?.role === 'sales'}
                                                                 value={svc.tl_id}
                                                                 onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
-                                                                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:border-blue-500 outline-none disabled:bg-gray-50"
+                                                                className={`${unifiedInputClass} disabled:bg-gray-50`}
                                                             >
                                                                 <option value="">Select TL</option>
                                                                 {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
@@ -498,11 +494,11 @@ export default function Clients() {
                                                         </div>
 
                                                         {/* 7. Delete Button */}
-                                                        <div className="col-span-1 flex justify-end pb-1">
+                                                        <div className="col-span-1 flex justify-end pb-2">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveService(index)}
-                                                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                                className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-transparent hover:border-red-100 hover:bg-red-50"
                                                             >
                                                                 <Trash2 className="w-5 h-5" />
                                                             </button>

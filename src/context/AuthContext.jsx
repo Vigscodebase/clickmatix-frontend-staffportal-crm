@@ -31,39 +31,35 @@ export const AuthProvider = ({ children }) => {
     const hasPermission = (perm) => {
         if (!user) return false;
         const role = user.role;
+
+        // 1. Super Admins and Admins always get full access
         const isPrivileged = ['super_admin', 'admin'].includes(role);
+        if (isPrivileged) return true;
+
+        // 2. Client Privileged roles automatically get to see all clients
         const isClientPrivileged = ['sales', 'finance', 'am_head', 'account_manager', 'marketing_manager', 'dev_manager'].includes(role);
-
-        //default privileged access for certain permissions
-        if (isPrivileged) {
-            if (['assign_managers', 'view_all_clients', 'manage_staff', 'can_add', 'can_edit'].includes(perm)) {
-                return true;
-            }
+        if (isClientPrivileged && perm === 'view_all_clients') {
+            return true;
         }
 
-        //Client privileged access for certain permissions
-        if (isClientPrivileged) {
-            if (['assign_managers', 'view_all_clients', 'can_add', 'can_edit'].includes(perm)) {
-                return true;
-            }
+        // 3. STRICT check for boolean permissions (This will now accurately check for 0 or 1)
+        if (perm === 'can_add') return user.can_add === 1 || user.can_add === true || user.can_add === '1';
+        if (perm === 'can_edit') return user.can_edit === 1 || user.can_edit === true || user.can_edit === '1';
+        if (perm === 'can_delete') return user.can_delete === 1 || user.can_delete === true || user.can_delete === '1';
+
+        // 4. Check dynamic permissions array
+        if (Array.isArray(user.permissions) && user.permissions.includes(perm)) {
+            return true;
         }
 
-
-        // Handle standard flags
-        if (perm === 'can_add') return user.can_add === 1;
-        if (perm === 'can_edit') return user.can_edit === 1;
-        if (perm === 'can_delete') return user.can_delete === 1;
-
-        // Handle granular permissions
-        return user.permissions && user.permissions.includes(perm);
+        return false;
     };
 
     const login = async (email, password) => {
         try {
-            const res = await axios.post('/api/login', { email, password });
-            const { token, user: loggedInUser } = res.data;
+            const response = await axios.post('/api/login', { email, password });
+            const { token, user: loggedInUser } = response.data;
 
-            // Parse permissions for the session
             if (typeof loggedInUser.permissions === 'string') {
                 try {
                     loggedInUser.permissions = JSON.parse(loggedInUser.permissions);

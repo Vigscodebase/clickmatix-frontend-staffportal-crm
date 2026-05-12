@@ -92,16 +92,31 @@ export default function Projects() {
     };
 
     const handleStatusUpdate = async (e, projectId, updates) => {
-        e.stopPropagation();
+        if (e && e.stopPropagation) e.stopPropagation();
+        
+        // --- FIX: Auto-link status text to traffic light color bidirectionally ---
+        let finalUpdates = { ...updates };
+        
+        // If dropdown was clicked (status provided, color missing)
+        if (finalUpdates.status && !finalUpdates.status_color) {
+            if (finalUpdates.status === 'Active') finalUpdates.status_color = 'Green';
+            if (finalUpdates.status === 'Pause') finalUpdates.status_color = 'Orange';
+            if (finalUpdates.status === 'Hold') finalUpdates.status_color = 'Red';
+        }
+        // If color dot was clicked (color provided, status missing)
+        else if (finalUpdates.status_color && !finalUpdates.status) {
+            if (finalUpdates.status_color === 'Green') finalUpdates.status = 'Active';
+            if (finalUpdates.status_color === 'Orange') finalUpdates.status = 'Pause';
+            if (finalUpdates.status_color === 'Red') finalUpdates.status = 'Hold';
+        }
+
         try {
-            await axios.patch(`/api/services/${projectId}/status`, updates);
-            setProjects(projects.map(p => p.id === projectId ? { ...p, ...updates } : p));
+            await axios.patch(`/api/services/${projectId}/status`, finalUpdates);
+            setProjects(projects.map(p => p.id === projectId ? { ...p, ...finalUpdates } : p));
         } catch (err) {
             console.error("Failed to update status", err);
         }
     };
-
-    const serviceTypes = ['All', 'SEO', 'G-ADS', 'META', 'EMAIL', 'SMM', 'Development'];
 
     return (
         <>
@@ -146,8 +161,7 @@ export default function Projects() {
                 {['All', ...services.map(s => s.name)].map((filterName) => (
                     <button
                         key={filterName}
-                        //onClick={() => setActiveFilter(filterName)}
-                        onClick={() => setActiveFilter(filterName)} // Assuming activeFilter is your state
+                        onClick={() => setActiveFilter(filterName)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeFilter === filterName
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
                             : 'bg-white text-gray-400 border border-gray-100 hover:border-blue-200'

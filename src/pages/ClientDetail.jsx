@@ -222,12 +222,19 @@ export default function ClientDetail() {
     const canEditTL = isSuperAdmin || isFinance;
     const canEditAM = isSuperAdmin || isFinance;
 
-    const getTrafficLightColor = (status) => {
+    // UPDATED FIX: Check for BOTH Status Words AND Colors
+    const getTrafficLightColor = (status, color) => {
+        if (color) {
+            const c = color.toLowerCase();
+            if (c.includes('green')) return 'bg-green-500';
+            if (c.includes('yellow')) return 'bg-yellow-500';
+            if (c.includes('red')) return 'bg-red-500';
+        }
         if (!status) return 'bg-gray-300';
         const s = status.toLowerCase();
-        if (s.includes('green')) return 'bg-green-500';
-        if (s.includes('yellow')) return 'bg-yellow-500';
-        if (s.includes('red')) return 'bg-red-500';
+        if (s.includes('active') || s.includes('green')) return 'bg-green-500';
+        if (s.includes('pause') || s.includes('yellow')) return 'bg-yellow-500';
+        if (s.includes('hold') || s.includes('red')) return 'bg-red-500';
         return 'bg-gray-300';
     };
 
@@ -637,7 +644,8 @@ export default function ClientDetail() {
                                     <div className="flex items-center gap-2">
                                         <div className="flex items-center gap-2 mr-4">
                                             <span className="text-xs text-gray-500">Status:</span>
-                                            <div className={`w-3 h-3 rounded-full ${getTrafficLightColor(service.status)}`} title={service.status}></div>
+                                            {/* FIX: Now safely passes both status and status_color to get the right light */}
+                                            <div className={`w-3 h-3 rounded-full ${getTrafficLightColor(service.status, service.status_color)}`} title={service.status}></div>
                                         </div>
                                         {canEdit && (
                                             <button
@@ -651,7 +659,8 @@ export default function ClientDetail() {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {(user?.role === 'account_manager' || user?.role === 'am_head') && (
+                                        {/* FIX: Only Admin, Account Manager, or AM Head can see the trash can */}
+                                        {(user?.role === 'super_admin' || user?.role === 'account_manager' || user?.role === 'am_head') && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
