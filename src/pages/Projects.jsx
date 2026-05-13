@@ -5,16 +5,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Projects() {
-    const { user } = useAuth();
+    // FIX: Extracted hasPermission from useAuth
+    const { user, hasPermission } = useAuth();
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [dashboardView, setDashboardView] = useState('team'); // 'team' or 'mine'
     const [activeFilter, setActiveFilter] = useState('All');
     const navigate = useNavigate();
+    
     // State for dynamic services
     const [services, setServices] = useState([]);
-    // State for the modal
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
     const [newServiceName, setNewServiceName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,15 +26,16 @@ export default function Projects() {
         'am_head', 'account_manager', 'marketing_manager', 'dev_manager'
     ];
     const canAddService = user && allowedRoles.includes(user.role);
+    
+    // FIX: Check if the user has edit permissions
+    const canEdit = hasPermission('can_edit');
 
-    // Fetch dynamic services on component mount
     useEffect(() => {
         fetchServices();
     }, []);
 
     const fetchServices = async () => {
         try {
-            // Updated URL
             const response = await axios.get('/api/service-types');
             setServices(response.data);
         } catch (error) {
@@ -47,7 +49,6 @@ export default function Projects() {
 
         setIsSubmitting(true);
         try {
-            // Updated URL
             const response = await axios.post('/api/service-types', { name: newServiceName });
             setServices([...services, response.data]);
             setNewServiceName('');
@@ -82,39 +83,46 @@ export default function Projects() {
         return matchesSearch && matchesFilter;
     });
 
-    const getStatusColor = (status) => {
-        switch (status?.toLowerCase()) {
-            case 'active': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-            case 'pause': return 'bg-amber-50 text-amber-700 border-amber-100';
-            case 'hold': return 'bg-rose-50 text-rose-700 border-rose-100';
-            default: return 'bg-gray-50 text-gray-700 border-gray-100';
+    // Strictly Active(Green), Pause(Yellow), Hold(Red) to match ClientDetail
+    const getStatusColor = (status, color) => {
+        if (color) {
+            if (color === 'Green') return 'bg-green-50 text-green-700 border-green-200';
+            if (color === 'Yellow') return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+            if (color === 'Red') return 'bg-rose-50 text-rose-700 border-rose-200';
         }
+        const s = (status || 'Active').toLowerCase();
+        if (s === 'active') return 'bg-green-50 text-green-700 border-green-200';
+        if (s === 'pause') return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        if (s === 'hold') return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     };
 
     const handleStatusUpdate = async (e, projectId, updates) => {
         if (e && e.stopPropagation) e.stopPropagation();
         
-        // --- FIX: Auto-link status text to traffic light color bidirectionally ---
         let finalUpdates = { ...updates };
         
-        // If dropdown was clicked (status provided, color missing)
+        // Bidirectionally sync dropdowns and dots
         if (finalUpdates.status && !finalUpdates.status_color) {
             if (finalUpdates.status === 'Active') finalUpdates.status_color = 'Green';
-            if (finalUpdates.status === 'Pause') finalUpdates.status_color = 'Orange';
+            if (finalUpdates.status === 'Pause') finalUpdates.status_color = 'Yellow';
             if (finalUpdates.status === 'Hold') finalUpdates.status_color = 'Red';
         }
-        // If color dot was clicked (color provided, status missing)
         else if (finalUpdates.status_color && !finalUpdates.status) {
             if (finalUpdates.status_color === 'Green') finalUpdates.status = 'Active';
-            if (finalUpdates.status_color === 'Orange') finalUpdates.status = 'Pause';
+            if (finalUpdates.status_color === 'Yellow') finalUpdates.status = 'Pause';
             if (finalUpdates.status_color === 'Red') finalUpdates.status = 'Hold';
         }
 
         try {
+            // Wait for backend to confirm
             await axios.patch(`/api/services/${projectId}/status`, finalUpdates);
+            
+            // Only update frontend if backend is successful
             setProjects(projects.map(p => p.id === projectId ? { ...p, ...finalUpdates } : p));
         } catch (err) {
             console.error("Failed to update status", err);
+            alert("Failed to update status on the server. Please try again.");
         }
     };
 
@@ -170,7 +178,6 @@ export default function Projects() {
                         {filterName}
                     </button>
                 ))}
-                {/* Put this beside your service filter listing */}
                 {canAddService && (
                     <button
                         onClick={() => setIsServiceModalOpen(true)}
@@ -217,33 +224,52 @@ export default function Projects() {
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</p>
                                     <p className="font-bold text-gray-900 text-sm">{project.tl_name || 'Unassigned'}</p>
                                 </div>
-                                <div className="text-center min-w-[100px]">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Health</p>
-                                    <div className="flex justify-center gap-1" onClick={e => e.stopPropagation()}>
-                                        {['Green', 'Orange', 'Red'].map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => handleStatusUpdate({ stopPropagation: () => { } }, project.id, { status_color: color })}
-                                                className={`w-3 h-3 rounded-full border transition-all ${project.status_color === color
-                                                    ? (color === 'Green' ? 'bg-green-500 border-green-600 scale-125 shadow-sm' : color === 'Orange' ? 'bg-amber-400 border-amber-500 scale-125 shadow-sm' : 'bg-rose-500 border-rose-600 scale-125 shadow-sm')
-                                                    : 'bg-gray-100 border-gray-200 opacity-30 hover:opacity-60'
-                                                    }`}
-                                                title={color}
-                                            />
-                                        ))}
+
+                                {/* FIX: Conditionally Render Health Column only for users with Edit Access */}
+                                {canEdit && (
+                                    <div className="text-center min-w-[100px]">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Health</p>
+                                        <div className="flex justify-center gap-1" onClick={e => e.stopPropagation()}>
+                                            {/* Strictly Map Green, Yellow, Red */}
+                                            {['Green', 'Yellow', 'Red'].map(color => {
+                                                const currentStatusColor = project.status_color || (
+                                                    (project.status === 'Active') ? 'Green' :
+                                                    (project.status === 'Pause') ? 'Yellow' :
+                                                    (project.status === 'Hold') ? 'Red' : 'Green'
+                                                );
+                                                const isActive = currentStatusColor === color;
+
+                                                return (
+                                                    <button
+                                                        key={color}
+                                                        onClick={(e) => handleStatusUpdate(e, project.id, { status_color: color })}
+                                                        className={`w-3 h-3 rounded-full border transition-all ${isActive
+                                                            ? (color === 'Green' ? 'bg-green-500 border-green-600 scale-125 shadow-sm' : color === 'Yellow' ? 'bg-yellow-400 border-yellow-500 scale-125 shadow-sm' : 'bg-rose-500 border-rose-600 scale-125 shadow-sm')
+                                                            : 'bg-gray-100 border-gray-200 opacity-30 hover:opacity-60'
+                                                            }`}
+                                                        title={color}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
                                 <div className="text-center min-w-[100px]">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
                                     <select
                                         value={project.status || 'Active'}
+                                        disabled={!canEdit} // FIX: Prevents non-editors from changing status text
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleStatusUpdate(e, project.id, { status: e.target.value })}
-                                        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border focus:outline-none appearance-none cursor-pointer ${getStatusColor(project.status)}`}
+                                        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border focus:outline-none appearance-none ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'} ${getStatusColor(project.status, project.status_color)}`}
                                     >
                                         <option value="Active">Active</option>
                                         <option value="Pause">Pause</option>
                                         <option value="Hold">Hold</option>
+                                        {/* Added Pending and Review Required to sync completely */}
+                                        <option value="Pending">Pending</option>
+                                        <option value="Review Required">Review Required</option>
                                     </select>
                                 </div>
                                 <div className="text-center min-w-[100px]">

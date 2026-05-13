@@ -134,8 +134,8 @@ export default function Dashboard() {
                     </>
                 )}
 
-                {/* Sales Specific or General Finance Stats */}
-                {(isAdmin || isFinance || isSales || isAMHead || hasPermission('approve_finance') || hasPermission('view_revenue')) && (
+                {/* Invoice Stats: Hidden from Sales */}
+                {(!isSales && (isAdmin || isFinance || isAMHead || hasPermission('approve_finance') || hasPermission('view_revenue'))) && (
                     <div className="bg-white p-6 rounded-2xl border border-blue-50 hover:shadow-lg transition-all flex flex-col justify-between shadow-sm">
                         <div className="flex justify-between items-start mb-4">
                             <div>
@@ -161,8 +161,8 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Lost Accounts (Managerial/AM view) */}
-                {(isAdmin || isAMHead || isAM || isManager || hasPermission('view_all_clients')) && (
+                {/* Lost Accounts (Managerial/AM view) - Hidden from Sales */}
+                {(!isSales && (isAdmin || isAMHead || isAM || isManager || hasPermission('view_all_clients'))) && (
                     <StatCard
                         title="Lost Accounts"
                         value={stats?.lostAccounts || 0}

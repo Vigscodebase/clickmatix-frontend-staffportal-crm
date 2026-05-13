@@ -107,8 +107,15 @@ export default function Clients() {
         return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
     };
 
-    // FIX: ADDED h-10 TO FORCE ALL INPUTS AND SELECTS TO BE EXACTLY THE SAME HEIGHT
     const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
+
+    // Dynamic Duplicate Detection
+    const serviceCounts = formData.services.reduce((acc, svc) => {
+        acc[svc.type] = (acc[svc.type] || 0) + 1;
+        return acc;
+    }, {});
+
+    const hasDuplicateServices = Object.values(serviceCounts).some(count => count > 1);
 
     return (
         <>
@@ -406,16 +413,21 @@ export default function Clients() {
 
                                                 const gridColsClass = colCount === 5 ? 'grid-cols-5' : colCount === 6 ? 'grid-cols-6' : 'grid-cols-7';
 
+                                                // Check if this specific service type is duplicated
+                                                const isDuplicate = serviceCounts[svc.type] > 1;
+
                                                 return (
-                                                    <div key={index} className={`grid ${gridColsClass} gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100 items-end transition-all duration-300`}>
+                                                    <div key={index} className={`grid ${gridColsClass} gap-4 bg-gray-50 p-4 rounded-2xl border ${isDuplicate ? 'border-red-300 bg-red-50/30' : 'border-gray-100'} items-end transition-all duration-300`}>
 
                                                         {/* 1. Service Type */}
                                                         <div className="col-span-1">
-                                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Service Type</label>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <label className={`block text-[10px] font-black uppercase tracking-widest ${isDuplicate ? 'text-red-500' : 'text-gray-400'}`}>Service Type</label>
+                                                            </div>
                                                             <select
                                                                 value={svc.type}
                                                                 onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
-                                                                className={unifiedInputClass}
+                                                                className={`${unifiedInputClass} ${isDuplicate ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-white' : ''}`}
                                                                 required
                                                             >
                                                                 <option value="" disabled>Select Service</option>
@@ -489,12 +501,18 @@ export default function Clients() {
                                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
                                                             >
                                                                 <option value="">Select TL</option>
-                                                                {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
+                                                                {/* FIX: Only show specific roles for Team Leads */}
+                                                                {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
+                                                                    <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
+                                                                ))}
                                                             </select>
                                                         </div>
 
                                                         {/* 7. Delete Button */}
-                                                        <div className="col-span-1 flex justify-end pb-2">
+                                                        <div className="col-span-1 flex flex-col justify-end items-end pb-2 gap-1">
+                                                            {isDuplicate && (
+                                                                <span className="text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
+                                                            )}
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveService(index)}
@@ -521,9 +539,12 @@ export default function Clients() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100"
+                                        disabled={hasDuplicateServices}
+                                        className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-colors shadow-lg ${hasDuplicateServices
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'}`}
                                     >
-                                        Create Account & Services
+                                        {hasDuplicateServices ? 'Fix Duplicate Services to Save' : 'Create Account & Services'}
                                     </button>
                                 </div>
                             </form>

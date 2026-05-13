@@ -10,22 +10,46 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        if (token && storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            // Parse permissions if stringified
-            if (typeof parsedUser.permissions === 'string') {
+        const initAuth = async () => {
+            const token = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('user');
+
+            if (token && storedUser) {
+                // 1. Immediately set state from LocalStorage so UI loads instantly
+                let parsedUser = JSON.parse(storedUser);
+                if (typeof parsedUser.permissions === 'string') {
+                    try { parsedUser.permissions = JSON.parse(parsedUser.permissions); }
+                    catch (e) { parsedUser.permissions = []; }
+                }
+                setUser(parsedUser);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                // 2. SILENT BACKGROUND SYNC: Fetch latest permissions on refresh
                 try {
-                    parsedUser.permissions = JSON.parse(parsedUser.permissions);
-                } catch (e) {
-                    parsedUser.permissions = [];
+                    const response = await axios.get('/api/profile');
+                    const freshUser = response.data.user;
+                    const freshToken = response.data.token; // The new token from backend
+
+                    // 3. Update local storage and state with the fresh data
+                    localStorage.setItem('user', JSON.stringify(freshUser));
+                    localStorage.setItem('token', freshToken);
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${freshToken}`;
+
+                    setUser(freshUser); // This triggers the re-render to hide/show buttons
+                } catch (error) {
+                    console.error("Failed to sync session:", error);
+                    // If the backend says token is entirely invalid, log them out
+                    if (error.response?.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        setUser(null);
+                    }
                 }
             }
-            setUser(parsedUser);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-        setLoading(false);
+            setLoading(false);
+        };
+
+        initAuth();
     }, []);
 
     const hasPermission = (perm) => {
@@ -42,7 +66,7 @@ export const AuthProvider = ({ children }) => {
             return true;
         }
 
-        // 3. STRICT check for boolean permissions (This will now accurately check for 0 or 1)
+        // 3. STRICT check for boolean permissions
         if (perm === 'can_add') return user.can_add === 1 || user.can_add === true || user.can_add === '1';
         if (perm === 'can_edit') return user.can_edit === 1 || user.can_edit === true || user.can_edit === '1';
         if (perm === 'can_delete') return user.can_delete === 1 || user.can_delete === true || user.can_delete === '1';
