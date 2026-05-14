@@ -10,13 +10,14 @@ export default function Clients() {
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [dashboardView, setDashboardView] = useState('team'); // 'team' or 'mine'
+    const [dashboardView, setDashboardView] = useState('team');
     const [modalOpen, setModalOpen] = useState(false);
     const [error, setError] = useState('');
     const [serviceTypes, setServiceTypes] = useState([]);
 
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: []
+        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: [],
+        agreement_status: 'Pending', invoice_status: 'Pending'
     });
 
     const navigate = useNavigate();
@@ -83,7 +84,10 @@ export default function Clients() {
         try {
             await axios.post('/api/clients', formData);
             setModalOpen(false);
-            setFormData({ name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: [] });
+            setFormData({
+                name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: [],
+                agreement_status: 'Pending', invoice_status: 'Pending'
+            });
             fetchClients();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create client');
@@ -98,18 +102,18 @@ export default function Clients() {
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
     const canAdd = hasPermission('can_add');
+    const canApproveFinance = hasPermission('approve_finance');
 
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
         if (s === 'active') return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' };
-        if (s === 'pause' || s === 'pending') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
-        if (s === 'hold') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' };
+        if (s === 'pause') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
+        if (s === 'hold' || s === 'pending') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' };
         return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
     };
 
     const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
 
-    // Dynamic Duplicate Detection
     const serviceCounts = formData.services.reduce((acc, svc) => {
         acc[svc.type] = (acc[svc.type] || 0) + 1;
         return acc;
@@ -381,6 +385,55 @@ export default function Clients() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                            Finance Status
+                                        </h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Agreement Status</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : formData.agreement_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                    {formData.agreement_status}
+                                                </span>
+                                                {canApproveFinance && (
+                                                    <select
+                                                        className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
+                                                        value={formData.agreement_status}
+                                                        onChange={(e) => setFormData({ ...formData, agreement_status: e.target.value })}
+                                                    >
+                                                        <option value="Pending">Pending</option>
+                                                        <option value="Signed">Signed</option>
+                                                        <option value="Review Required">Review Required</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment/Invoice Status</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.invoice_status === 'Paid' ? 'bg-green-100 text-green-700' : formData.invoice_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                    {formData.invoice_status}
+                                                </span>
+                                                {canApproveFinance && (
+                                                    <select
+                                                        className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
+                                                        value={formData.invoice_status}
+                                                        onChange={(e) => setFormData({ ...formData, invoice_status: e.target.value })}
+                                                    >
+                                                        <option value="Pending">Pending</option>
+                                                        <option value="Paid">Paid</option>
+                                                        <option value="Review Required">Review Required</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                                         <h3 className="font-bold text-gray-900 flex items-center gap-2">
@@ -412,8 +465,6 @@ export default function Clients() {
                                                 if (showDate) colCount++;
 
                                                 const gridColsClass = colCount === 5 ? 'grid-cols-5' : colCount === 6 ? 'grid-cols-6' : 'grid-cols-7';
-
-                                                // Check if this specific service type is duplicated
                                                 const isDuplicate = serviceCounts[svc.type] > 1;
 
                                                 return (
@@ -423,6 +474,9 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <label className={`block text-[10px] font-black uppercase tracking-widest ${isDuplicate ? 'text-red-500' : 'text-gray-400'}`}>Service Type</label>
+                                                                {isDuplicate && (
+                                                                    <span className="text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
+                                                                )}
                                                             </div>
                                                             <select
                                                                 value={svc.type}
@@ -495,13 +549,12 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
                                                             <select
-                                                                disabled={user?.role === 'sales'}
+                                                                disabled={user?.role === 'sales' || user?.role === 'finance'}
                                                                 value={svc.tl_id}
                                                                 onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
                                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
                                                             >
                                                                 <option value="">Select TL</option>
-                                                                {/* FIX: Only show specific roles for Team Leads */}
                                                                 {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
                                                                     <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
                                                                 ))}
@@ -510,9 +563,6 @@ export default function Clients() {
 
                                                         {/* 7. Delete Button */}
                                                         <div className="col-span-1 flex flex-col justify-end items-end pb-2 gap-1">
-                                                            {isDuplicate && (
-                                                                <span className="text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
-                                                            )}
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveService(index)}

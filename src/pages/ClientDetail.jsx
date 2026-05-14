@@ -4,7 +4,7 @@ import axios from '../lib/axios';
 import {
     ArrowLeft, Mail, Phone, Globe, ChevronDown, ChevronUp, User,
     Star, Search, TrendingUp, Facebook, AtSign, MessageSquare,
-    Edit2, Trash2, Plus, X, Loader2, AlertCircle
+    Edit2, Trash2, Plus, X, Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -139,6 +139,7 @@ export default function ClientDetail() {
         try {
             await axios.patch(`/api/clients/${id}/assign`, payload);
             fetchClientData();
+            alert('Staff assigned successfully');
         } catch (err) {
             alert('Failed to assign staff');
         }
@@ -245,9 +246,7 @@ export default function ClientDetail() {
         }
     };
 
-    const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
-
-    const isDuplicateService = editingService.type !== '' && services.some(s => s.type === editingService.type && s.id !== editingService.id);
+    const unifiedInputClass = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
 
     if (loading) {
         return (
@@ -631,7 +630,8 @@ export default function ClientDetail() {
                                     <div className="flex-1">
                                         <h3 className="font-semibold text-gray-900">{service.type}</h3>
                                         <p className="text-sm text-gray-600">
-                                            Monthly Fee: <span className="font-medium">${service.monthly_fee?.toFixed(2) || '0.00'}</span>
+                                            {/* FIX: Dynamic Monthly/One-off Text */}
+                                            {service.revenue_type === 'One-off' ? 'One-off Fee' : 'Monthly Fee'}: <span className="font-medium">${service.monthly_fee?.toFixed(2) || '0.00'}</span>
                                             {service.ad_spend > 0 && (
                                                 <span className="ml-4">Ad Spend: <span className="font-medium">${service.ad_spend?.toFixed(2)}</span></span>
                                             )}
@@ -751,7 +751,7 @@ export default function ClientDetail() {
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Account Manager</label>
                                     <select
                                         disabled={!canEditAM || isSales}
-                                        value={editingClient.account_manager_id || ''}
+                                        value={editingClient.account_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, account_manager_id: e.target.value })}
                                         className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
@@ -763,7 +763,7 @@ export default function ClientDetail() {
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Marketing Manager</label>
                                     <select
                                         disabled={!canEditMM || isSales}
-                                        value={editingClient.marketing_manager_id || ''}
+                                        value={editingClient.marketing_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, marketing_manager_id: e.target.value })}
                                         className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
@@ -775,7 +775,7 @@ export default function ClientDetail() {
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Dev Manager</label>
                                     <select
                                         disabled={!canEditDM || isSales}
-                                        value={editingClient.dev_manager_id || ''}
+                                        value={editingClient.dev_manager_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, dev_manager_id: e.target.value })}
                                         className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
@@ -787,7 +787,7 @@ export default function ClientDetail() {
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
                                     <select
                                         disabled={!isSuperAdmin || isSales}
-                                        value={editingClient.am_head_id || ''}
+                                        value={editingClient.am_head_id}
                                         onChange={(e) => setEditingClient({ ...editingClient, am_head_id: e.target.value })}
                                         className={`${unifiedInputClass} disabled:bg-gray-50`}
                                     >
@@ -818,17 +818,13 @@ export default function ClientDetail() {
                         </div>
                         <form onSubmit={handleSaveService} className="p-6 space-y-4">
                             <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className={`block text-xs font-bold uppercase tracking-widest ${isDuplicateService ? 'text-red-500' : 'text-gray-500'}`}>Service Type</label>
-                                    {isDuplicateService && (
-                                        <span className="text-[10px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
-                                    )}
-                                </div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Service Type</label>
+
                                 <select
                                     name="type"
                                     value={editingService.type || ''}
                                     onChange={(e) => setEditingService({ ...editingService, type: e.target.value })}
-                                    className={`${unifiedInputClass} ${isDuplicateService ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-red-50/10' : ''}`}
+                                    className={unifiedInputClass}
                                     required
                                 >
                                     <option value="" disabled>Select Service Type</option>
@@ -838,10 +834,14 @@ export default function ClientDetail() {
                                         </option>
                                     ))}
                                 </select>
+
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Monthly Fee</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                        {/* FIX: Dynamic Modal Label */}
+                                        {editingService.revenue_type === 'One-off' ? 'One-off Fee' : 'Monthly Fee'}
+                                    </label>
                                     <input
                                         type="number"
                                         value={editingService.monthly_fee}
@@ -866,7 +866,7 @@ export default function ClientDetail() {
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Team Lead</label>
                                 <select
                                     disabled={!canEditTL || isSales}
-                                    value={editingService.tl_id || ''}
+                                    value={editingService.tl_id}
                                     onChange={(e) => setEditingService({ ...editingService, tl_id: e.target.value })}
                                     className={`${unifiedInputClass} disabled:bg-gray-50`}
                                 >
@@ -910,17 +910,9 @@ export default function ClientDetail() {
                                     </div>
                                 )}
                             </div>
-                            <div className="pt-6 flex gap-3">
-                                <button type="button" onClick={() => setServiceModalOpen(false)} className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-                                <button 
-                                    type="submit" 
-                                    disabled={isDuplicateService}
-                                    className={`flex-1 px-4 py-3 font-bold rounded-xl transition-colors shadow-lg ${isDuplicateService 
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
-                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'}`}
-                                >
-                                    {isDuplicateService ? 'Duplicate Service' : 'Save Service'}
-                                </button>
+                            <div className="pt-4 flex gap-3">
+                                <button type="button" onClick={() => setServiceModalOpen(false)} className="flex-1 px-4 py-2 border rounded-xl">Cancel</button>
+                                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl">Save Service</button>
                             </div>
                         </form>
                     </div>

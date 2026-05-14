@@ -5,29 +5,24 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Projects() {
-    // FIX: Extracted hasPermission from useAuth
     const { user, hasPermission } = useAuth();
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [dashboardView, setDashboardView] = useState('team'); // 'team' or 'mine'
+    const [dashboardView, setDashboardView] = useState('team');
     const [activeFilter, setActiveFilter] = useState('All');
     const navigate = useNavigate();
-    
-    // State for dynamic services
+
     const [services, setServices] = useState([]);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
     const [newServiceName, setNewServiceName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Role verification
     const allowedRoles = [
         'super_admin', 'admin', 'sales', 'finance',
         'am_head', 'account_manager', 'marketing_manager', 'dev_manager'
     ];
     const canAddService = user && allowedRoles.includes(user.role);
-    
-    // FIX: Check if the user has edit permissions
     const canEdit = hasPermission('can_edit');
 
     useEffect(() => {
@@ -83,7 +78,6 @@ export default function Projects() {
         return matchesSearch && matchesFilter;
     });
 
-    // Strictly Active(Green), Pause(Yellow), Hold(Red) to match ClientDetail
     const getStatusColor = (status, color) => {
         if (color) {
             if (color === 'Green') return 'bg-green-50 text-green-700 border-green-200';
@@ -92,33 +86,36 @@ export default function Projects() {
         }
         const s = (status || 'Active').toLowerCase();
         if (s === 'active') return 'bg-green-50 text-green-700 border-green-200';
-        if (s === 'pause') return 'bg-yellow-50 text-yellow-700 border-yellow-200';
-        if (s === 'hold') return 'bg-rose-50 text-rose-700 border-rose-200';
+        if (s === 'pause' || s === 'review required') return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        if (s === 'hold' || s === 'pending') return 'bg-rose-50 text-rose-700 border-rose-200';
         return 'bg-gray-50 text-gray-700 border-gray-200';
     };
 
     const handleStatusUpdate = async (e, projectId, updates) => {
         if (e && e.stopPropagation) e.stopPropagation();
-        
+
         let finalUpdates = { ...updates };
-        
-        // Bidirectionally sync dropdowns and dots
+
         if (finalUpdates.status && !finalUpdates.status_color) {
             if (finalUpdates.status === 'Active') finalUpdates.status_color = 'Green';
-            if (finalUpdates.status === 'Pause') finalUpdates.status_color = 'Yellow';
-            if (finalUpdates.status === 'Hold') finalUpdates.status_color = 'Red';
+            if (finalUpdates.status === 'Pause' || finalUpdates.status === 'Review Required') finalUpdates.status_color = 'Yellow';
+            if (finalUpdates.status === 'Hold' || finalUpdates.status === 'Pending') finalUpdates.status_color = 'Red';
         }
         else if (finalUpdates.status_color && !finalUpdates.status) {
+            const currentProject = projects.find(p => p.id === projectId);
+            const currentStatus = currentProject?.status || 'Active';
+
             if (finalUpdates.status_color === 'Green') finalUpdates.status = 'Active';
-            if (finalUpdates.status_color === 'Yellow') finalUpdates.status = 'Pause';
-            if (finalUpdates.status_color === 'Red') finalUpdates.status = 'Hold';
+            if (finalUpdates.status_color === 'Yellow') {
+                finalUpdates.status = currentStatus === 'Review Required' ? 'Review Required' : 'Pause';
+            }
+            if (finalUpdates.status_color === 'Red') {
+                finalUpdates.status = currentStatus === 'Pending' ? 'Pending' : 'Hold';
+            }
         }
 
         try {
-            // Wait for backend to confirm
             await axios.patch(`/api/services/${projectId}/status`, finalUpdates);
-            
-            // Only update frontend if backend is successful
             setProjects(projects.map(p => p.id === projectId ? { ...p, ...finalUpdates } : p));
         } catch (err) {
             console.error("Failed to update status", err);
@@ -134,7 +131,6 @@ export default function Projects() {
                     <p className="text-gray-500 mt-1">Detailed breakdown of active services for your department.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {/* Team/Mine Toggle for AM Head and Admins */}
                     {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
@@ -225,17 +221,15 @@ export default function Projects() {
                                     <p className="font-bold text-gray-900 text-sm">{project.tl_name || 'Unassigned'}</p>
                                 </div>
 
-                                {/* FIX: Conditionally Render Health Column only for users with Edit Access */}
                                 {canEdit && (
                                     <div className="text-center min-w-[100px]">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Health</p>
                                         <div className="flex justify-center gap-1" onClick={e => e.stopPropagation()}>
-                                            {/* Strictly Map Green, Yellow, Red */}
                                             {['Green', 'Yellow', 'Red'].map(color => {
                                                 const currentStatusColor = project.status_color || (
                                                     (project.status === 'Active') ? 'Green' :
-                                                    (project.status === 'Pause') ? 'Yellow' :
-                                                    (project.status === 'Hold') ? 'Red' : 'Green'
+                                                        (project.status === 'Pause' || project.status === 'Review Required') ? 'Yellow' :
+                                                            (project.status === 'Hold' || project.status === 'Pending') ? 'Red' : 'Green'
                                                 );
                                                 const isActive = currentStatusColor === color;
 
@@ -255,19 +249,19 @@ export default function Projects() {
                                     </div>
                                 )}
 
-                                <div className="text-center min-w-[100px]">
+                                <div className="text-center flex flex-col items-center">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
                                     <select
                                         value={project.status || 'Active'}
-                                        disabled={!canEdit} // FIX: Prevents non-editors from changing status text
+                                        disabled={!canEdit}
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => handleStatusUpdate(e, project.id, { status: e.target.value })}
-                                        className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border focus:outline-none appearance-none ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'} ${getStatusColor(project.status, project.status_color)}`}
+                                        /* FIX: Added [text-align-last:center] and reduced padding to fix spacing */
+                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border focus:outline-none appearance-none text-center [text-align-last:center] ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'} ${getStatusColor(project.status, project.status_color)}`}
                                     >
                                         <option value="Active">Active</option>
                                         <option value="Pause">Pause</option>
                                         <option value="Hold">Hold</option>
-                                        {/* Added Pending and Review Required to sync completely */}
                                         <option value="Pending">Pending</option>
                                         <option value="Review Required">Review Required</option>
                                     </select>

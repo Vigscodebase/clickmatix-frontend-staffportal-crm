@@ -103,9 +103,6 @@ export default function Dashboard() {
                             onChange={(e) => setSelectedMonth(e.target.value)}
                             className="text-sm font-bold bg-transparent outline-none text-gray-700 w-full cursor-pointer z-10"
                         />
-                        {/* <div className="absolute right-3 pointer-events-none">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                        </div> */}
                     </div>
                 </div>
             </div>
@@ -121,8 +118,8 @@ export default function Dashboard() {
                     color="bg-blue-600"
                 />
 
-                {/* Revenue Stats: Not for TLs */}
-                {(isAdmin || hasPermission('view_revenue')) && (
+                {/* Revenue Stats: FIX: Now visible to Finance Users as well */}
+                {(isAdmin || isFinance || hasPermission('view_revenue')) && (
                     <>
                         <StatCard
                             title="Monthly Revenue"
@@ -197,7 +194,7 @@ export default function Dashboard() {
 
             {/* Main Content Area */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Service Distribution (Except Sales/TLs maybe?) */}
+                {/* Service Distribution (Except Sales) */}
                 {(!isSales) && (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -258,11 +255,12 @@ export default function Dashboard() {
                                 <tbody className="divide-y divide-gray-100">
                                     {accountManagers.map((am) => (
                                         <tr key={am.name} className="hover:bg-gray-50 transition-colors">
+                                            {/* FIX: Handled "Unassigned" styling gracefully */}
                                             <td className="px-6 py-4 flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
-                                                    {am.name.charAt(0)}
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${am.name === 'Unassigned' ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                    {am.name === 'Unassigned' ? '?' : am.name.charAt(0)}
                                                 </div>
-                                                <span className="font-bold text-gray-900 uppercase text-[11px]">{am.name}</span>
+                                                <span className={`font-bold uppercase text-[11px] ${am.name === 'Unassigned' ? 'text-gray-500' : 'text-gray-900'}`}>{am.name}</span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-gray-600 font-medium">{am.num_accounts} Accounts</span>
