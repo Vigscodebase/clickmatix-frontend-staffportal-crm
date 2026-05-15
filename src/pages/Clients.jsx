@@ -16,7 +16,7 @@ export default function Clients() {
     const [serviceTypes, setServiceTypes] = useState([]);
 
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: [],
+        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', am_head_id: '', services: [],
         agreement_status: 'Pending', invoice_status: 'Pending'
     });
 
@@ -85,7 +85,7 @@ export default function Clients() {
             await axios.post('/api/clients', formData);
             setModalOpen(false);
             setFormData({
-                name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', services: [],
+                name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', am_head_id: '', services: [],
                 agreement_status: 'Pending', invoice_status: 'Pending'
             });
             fetchClients();
@@ -102,13 +102,13 @@ export default function Clients() {
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
     const canAdd = hasPermission('can_add');
-    const canApproveFinance = hasPermission('approve_finance');
+    const canApproveFinance = user?.role === 'finance' || user?.role === 'super_admin';
 
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
         if (s === 'active') return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' };
-        if (s === 'pause') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
-        if (s === 'hold' || s === 'pending') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' };
+        if (s === 'pause' || s === 'pending') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' };
+        if (s === 'hold') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' };
         return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
     };
 
@@ -341,16 +341,16 @@ export default function Clients() {
                                             Account Management
                                         </h3>
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Account Manager (AM)</label>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
                                             <select
                                                 disabled={user?.role === 'sales'}
-                                                value={formData.am_id}
-                                                onChange={(e) => setFormData({ ...formData, am_id: e.target.value })}
+                                                value={formData.am_head_id}
+                                                onChange={(e) => setFormData({ ...formData, am_head_id: e.target.value })}
                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
                                             >
-                                                <option value="">Select Manager</option>
-                                                {staff.filter(s => s.role === 'am_head' || s.role === 'account_manager' || s.department === 'Sales').map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                                                <option value="">Select AM Head</option>
+                                                {staff.filter(s => s.role === 'am_head').map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -385,21 +385,21 @@ export default function Clients() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 mb-8">
-                                    <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                                            Finance Status
-                                        </h3>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                        <div>
-                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Agreement Status</label>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : formData.agreement_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                    {formData.agreement_status}
-                                                </span>
-                                                {canApproveFinance && (
+                                {canApproveFinance && (
+                                    <div className="space-y-4 mb-8">
+                                        <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                                Finance Status
+                                            </h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Agreement Status</label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : formData.agreement_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                        {formData.agreement_status}
+                                                    </span>
                                                     <select
                                                         className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
                                                         value={formData.agreement_status}
@@ -409,16 +409,14 @@ export default function Clients() {
                                                         <option value="Signed">Signed</option>
                                                         <option value="Review Required">Review Required</option>
                                                     </select>
-                                                )}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment/Invoice Status</label>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.invoice_status === 'Paid' ? 'bg-green-100 text-green-700' : formData.invoice_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                    {formData.invoice_status}
-                                                </span>
-                                                {canApproveFinance && (
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment/Invoice Status</label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.invoice_status === 'Paid' ? 'bg-green-100 text-green-700' : formData.invoice_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                        {formData.invoice_status}
+                                                    </span>
                                                     <select
                                                         className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
                                                         value={formData.invoice_status}
@@ -428,11 +426,11 @@ export default function Clients() {
                                                         <option value="Paid">Paid</option>
                                                         <option value="Review Required">Review Required</option>
                                                     </select>
-                                                )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center border-b border-gray-100 pb-2">
@@ -474,9 +472,6 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <label className={`block text-[10px] font-black uppercase tracking-widest ${isDuplicate ? 'text-red-500' : 'text-gray-400'}`}>Service Type</label>
-                                                                {isDuplicate && (
-                                                                    <span className="text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
-                                                                )}
                                                             </div>
                                                             <select
                                                                 value={svc.type}
@@ -571,7 +566,9 @@ export default function Clients() {
                                                                 <Trash2 className="w-5 h-5" />
                                                             </button>
                                                         </div>
-
+                                                        {isDuplicate && (
+                                                            <span className="text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded uppercase tracking-widest shadow-sm">No Duplicate Service</span>
+                                                        )}
                                                     </div>
                                                 );
                                             })}

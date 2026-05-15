@@ -22,7 +22,7 @@ export default function Sidebar() {
     useEffect(() => {
         if (user) {
             fetchUnreadCount();
-            const interval = setInterval(fetchUnreadCount, 30000);
+            const interval = setInterval(fetchUnreadCount, 300);
             return () => clearInterval(interval);
         }
     }, [user?.id]); // Only re-run if user ID changes

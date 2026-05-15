@@ -195,7 +195,7 @@ export default function Dashboard() {
             {/* Main Content Area */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Service Distribution (Except Sales) */}
-                {(!isSales) && (
+                {(isAdmin || isFinance) && (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">

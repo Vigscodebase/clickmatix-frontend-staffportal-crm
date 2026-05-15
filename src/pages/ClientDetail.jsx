@@ -4,7 +4,7 @@ import axios from '../lib/axios';
 import {
     ArrowLeft, Mail, Phone, Globe, ChevronDown, ChevronUp, User,
     Star, Search, TrendingUp, Facebook, AtSign, MessageSquare,
-    Edit2, Trash2, Plus, X, Loader2
+    Edit2, Trash2, Plus, X, Loader2, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,7 +22,6 @@ export default function ClientDetail() {
     const [error, setError] = useState('');
     const [serviceTypes, setServiceTypes] = useState([]);
 
-    // Modals
     const [clientModalOpen, setClientModalOpen] = useState(false);
     const [serviceModalOpen, setServiceModalOpen] = useState(false);
 
@@ -159,6 +158,10 @@ export default function ClientDetail() {
         }
     };
 
+    const isDuplicateService = editingService.type !== '' && services.some(s =>
+        s.type === editingService.type && String(s.id) !== String(editingService.id)
+    );
+
     const handleUpdateService = async (svcId, updates) => {
         try {
             await axios.put(`/api/services/${svcId}`, updates);
@@ -170,6 +173,8 @@ export default function ClientDetail() {
 
     const handleSaveService = async (e) => {
         e.preventDefault();
+        if (isDuplicateService) return;
+
         try {
             if (editingService.id) {
                 await axios.put(`/api/services/${editingService.id}`, editingService);
@@ -205,12 +210,10 @@ export default function ClientDetail() {
 
     const canEdit = hasPermission('can_edit');
     const canDelete = hasPermission('can_delete');
-    const canApproveFinance = hasPermission('approve_finance');
+
+    const canApproveFinance = user?.role === 'finance' || user?.role === 'super_admin';
 
     const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
-    const isAMHead = user?.role === 'am_head' || user?.role === 'account_manager';
-    const isMM = user?.role === 'marketing_manager';
-    const isDM = user?.role === 'dev_manager';
     const isSales = user?.role === 'sales';
     const isFinance = user?.role === 'finance';
 
@@ -218,6 +221,9 @@ export default function ClientDetail() {
     const canEditDM = isSuperAdmin || isFinance;
     const canEditTL = isSuperAdmin || isFinance;
     const canEditAM = isSuperAdmin || isFinance;
+
+    // --- FIX: Strictly control individual Team Lead dropdown visibility ---
+    const canSeeTLDropdown = user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager';
 
     const getTrafficLightColor = (status, color) => {
         if (color) {
@@ -246,7 +252,7 @@ export default function ClientDetail() {
         }
     };
 
-    const unifiedInputClass = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
+    const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
 
     if (loading) {
         return (
@@ -285,6 +291,12 @@ export default function ClientDetail() {
             </div>
         );
     }
+
+    const step1Done = true;
+    const step2Done = client.agreement_status === 'Signed' && client.invoice_status === 'Paid';
+    const step3Done = step2Done && !!client.am_head_id && (!!client.marketing_manager_id || !!client.dev_manager_id);
+    const step4Done = step3Done && services.length > 0 && services.every(s => !!s.tl_id);
+    const step5Done = step4Done;
 
     return (
         <div className="p-8">
@@ -366,11 +378,11 @@ export default function ClientDetail() {
                         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2"></div>
                         <div className="relative flex justify-between">
                             {[
-                                { label: 'Sales Handover', done: true },
-                                { label: 'Finance Review', done: client.agreement_status === 'Signed' && client.invoice_status === 'Paid' },
-                                { label: 'Head Assignment', done: client.am_head_id !== null || client.marketing_manager_id !== null || client.dev_manager_id !== null },
-                                { label: 'Onboarding', done: services.length > 0 && services.every(s => s.tl_id) },
-                                { label: 'Execution', done: services.length > 0 && services.every(s => s.tl_id) }
+                                { label: 'Sales Handover', done: step1Done },
+                                { label: 'Finance Review', done: step2Done },
+                                { label: 'Head Assignment', done: step3Done },
+                                { label: 'Onboarding', done: step4Done },
+                                { label: 'Execution', done: step5Done }
                             ].map((step, idx) => (
                                 <div key={idx} className="flex flex-col items-center gap-2 relative z-10">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${step.done ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-400'}`}>
@@ -438,7 +450,7 @@ export default function ClientDetail() {
                         )}
                     </div>
 
-                    {canApproveFinance && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
+                    {(isFinance || isSuperAdmin) && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                             <div>
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Marketing Manager</label>
@@ -494,11 +506,11 @@ export default function ClientDetail() {
                         </div>
                     )}
 
-                    {(isSuperAdmin || isAMHead || isMM || isDM) && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
+                    {(user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
                         <div className="mt-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
                             <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest mb-4">Departmental Assignments</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {(isSuperAdmin || isAMHead) && (
+                                {(isSuperAdmin || user?.role === 'am_head') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Account Manager Assignment</label>
                                         <div className="flex gap-2">
@@ -508,14 +520,15 @@ export default function ClientDetail() {
                                                 onChange={(e) => handleAssignStaff({ account_manager_id: e.target.value })}
                                             >
                                                 <option value="">Select Account Manager</option>
-                                                {staff.filter(s => s.role === 'account_manager' || s.department === 'Sales').map(s => (
+                                                {staff.filter(s => s.role === 'account_manager' || s.role === 'am_head').map(s => (
                                                     <option key={s.id} value={s.id}>{s.name}</option>
                                                 ))}
                                             </select>
                                         </div>
                                     </div>
                                 )}
-                                {(isSuperAdmin || isMM || isDM) && (
+
+                                {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Service Team Leads Assignment</label>
                                         <div className="space-y-2">
@@ -528,7 +541,7 @@ export default function ClientDetail() {
                                                         onChange={(e) => handleAssignStaff({ tl_id: e.target.value, service_type: svc.type })}
                                                     >
                                                         <option value="">Assign TL</option>
-                                                        {staff.filter(s => s.role === 'staff' || s.role === 'team_lead').map(s => (
+                                                        {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
                                                             <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
                                                         ))}
                                                     </select>
@@ -630,7 +643,6 @@ export default function ClientDetail() {
                                     <div className="flex-1">
                                         <h3 className="font-semibold text-gray-900">{service.type}</h3>
                                         <p className="text-sm text-gray-600">
-                                            {/* FIX: Dynamic Monthly/One-off Text */}
                                             {service.revenue_type === 'One-off' ? 'One-off Fee' : 'Monthly Fee'}: <span className="font-medium">${service.monthly_fee?.toFixed(2) || '0.00'}</span>
                                             {service.ad_spend > 0 && (
                                                 <span className="ml-4">Ad Spend: <span className="font-medium">${service.ad_spend?.toFixed(2)}</span></span>
@@ -671,8 +683,8 @@ export default function ClientDetail() {
                             </div>
 
                             {expandedService === service.id && (
-                                <div className="border-t border-gray-200 p-4 bg-gray-50">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className={`border-t border-gray-200 p-4 bg-gray-50 grid ${canSeeTLDropdown ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                                    {canSeeTLDropdown && (
                                         <div>
                                             <p className="text-sm text-gray-600 mb-1">Team Lead</p>
                                             <div className="flex items-center gap-2">
@@ -688,10 +700,10 @@ export default function ClientDetail() {
                                                 </select>
                                             </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600 mb-1">Service Status</p>
-                                            <span className="text-sm font-medium text-gray-900">{service.status || 'Active'}</span>
-                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="text-sm text-gray-600 mb-1">Service Status</p>
+                                        <span className="text-sm font-medium text-gray-900">{service.status || 'Active'}</span>
                                     </div>
                                 </div>
                             )}
@@ -700,111 +712,7 @@ export default function ClientDetail() {
                 )}
             </div>
 
-            {clientModalOpen && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                            <h2 className="text-xl font-bold text-gray-900">Edit Client Information</h2>
-                            <button onClick={() => setClientModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleUpdateClient} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Client Name</label>
-                                    <input
-                                        type="text" required
-                                        value={editingClient.name}
-                                        onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
-                                        className={unifiedInputClass}
-                                    />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Domain</label>
-                                    <input
-                                        type="text"
-                                        value={editingClient.domain}
-                                        onChange={(e) => setEditingClient({ ...editingClient, domain: e.target.value })}
-                                        className={unifiedInputClass}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
-                                    <input
-                                        type="email"
-                                        value={editingClient.email}
-                                        onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
-                                        className={unifiedInputClass}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Phone</label>
-                                    <input
-                                        type="text"
-                                        value={editingClient.phone}
-                                        onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
-                                        className={unifiedInputClass}
-                                    />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Account Manager</label>
-                                    <select
-                                        disabled={!canEditAM || isSales}
-                                        value={editingClient.account_manager_id}
-                                        onChange={(e) => setEditingClient({ ...editingClient, account_manager_id: e.target.value })}
-                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
-                                    >
-                                        <option value="">Select Manager</option>
-                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Marketing Manager</label>
-                                    <select
-                                        disabled={!canEditMM || isSales}
-                                        value={editingClient.marketing_manager_id}
-                                        onChange={(e) => setEditingClient({ ...editingClient, marketing_manager_id: e.target.value })}
-                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
-                                    >
-                                        <option value="">Select Manager</option>
-                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Dev Manager</label>
-                                    <select
-                                        disabled={!canEditDM || isSales}
-                                        value={editingClient.dev_manager_id}
-                                        onChange={(e) => setEditingClient({ ...editingClient, dev_manager_id: e.target.value })}
-                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
-                                    >
-                                        <option value="">Select Manager</option>
-                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
-                                    <select
-                                        disabled={!isSuperAdmin || isSales}
-                                        value={editingClient.am_head_id}
-                                        onChange={(e) => setEditingClient({ ...editingClient, am_head_id: e.target.value })}
-                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
-                                    >
-                                        <option value="">Select AM Head</option>
-                                        {staff.filter(s => s.role === 'am_head').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setClientModalOpen(false)} className="flex-1 px-4 py-2 border rounded-xl">Cancel</button>
-                                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl">Save Changes</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
+            {/* Add/Edit Service Modal */}
             {serviceModalOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -817,14 +725,18 @@ export default function ClientDetail() {
                             </button>
                         </div>
                         <form onSubmit={handleSaveService} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Service Type</label>
-
+                            <div className={`transition-all duration-300 ${isDuplicateService ? 'p-4 bg-red-50/50 border border-red-200 rounded-xl' : ''}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className={`block text-[10px] font-black uppercase tracking-widest ${isDuplicateService ? 'text-red-600' : 'text-gray-500'}`}>Service Type</label>
+                                    {isDuplicateService && (
+                                        <span className="text-[9px] font-black text-white bg-red-500 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm">Duplicate</span>
+                                    )}
+                                </div>
                                 <select
                                     name="type"
                                     value={editingService.type || ''}
                                     onChange={(e) => setEditingService({ ...editingService, type: e.target.value })}
-                                    className={unifiedInputClass}
+                                    className={`${unifiedInputClass} ${isDuplicateService ? 'border-red-500 focus:border-red-500 focus:ring-red-500 text-red-700 bg-white' : ''}`}
                                     required
                                 >
                                     <option value="" disabled>Select Service Type</option>
@@ -834,12 +746,13 @@ export default function ClientDetail() {
                                         </option>
                                     ))}
                                 </select>
-
+                                {isDuplicateService && (
+                                    <p className="text-[10px] text-red-500 mt-1.5 font-bold">This client already has the {editingService.type} service active.</p>
+                                )}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                                        {/* FIX: Dynamic Modal Label */}
                                         {editingService.revenue_type === 'One-off' ? 'One-off Fee' : 'Monthly Fee'}
                                     </label>
                                     <input
@@ -849,7 +762,6 @@ export default function ClientDetail() {
                                         className={unifiedInputClass}
                                     />
                                 </div>
-                                {/* CONDITIONAL AD SPEND HERE */}
                                 {(editingService.type === 'G-ADS' || editingService.type === 'META') && (
                                     <div className="animate-in fade-in zoom-in duration-200">
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Ad Spend</label>
@@ -862,18 +774,24 @@ export default function ClientDetail() {
                                     </div>
                                 )}
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Team Lead</label>
-                                <select
-                                    disabled={!canEditTL || isSales}
-                                    value={editingService.tl_id}
-                                    onChange={(e) => setEditingService({ ...editingService, tl_id: e.target.value })}
-                                    className={`${unifiedInputClass} disabled:bg-gray-50`}
-                                >
-                                    <option value="">Select TL</option>
-                                    {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
-                                </select>
-                            </div>
+
+                            {canSeeTLDropdown && (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Team Lead</label>
+                                    <select
+                                        disabled={!canEditTL || isSales}
+                                        value={editingService.tl_id || ''}
+                                        onChange={(e) => setEditingService({ ...editingService, tl_id: e.target.value })}
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                    >
+                                        <option value="">Select TL</option>
+                                        {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
+                                            <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Project Status</label>
                                 <select
@@ -910,9 +828,17 @@ export default function ClientDetail() {
                                     </div>
                                 )}
                             </div>
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setServiceModalOpen(false)} className="flex-1 px-4 py-2 border rounded-xl">Cancel</button>
-                                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl">Save Service</button>
+                            <div className="pt-6 flex gap-3">
+                                <button type="button" onClick={() => setServiceModalOpen(false)} className="flex-1 px-4 py-3 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
+                                <button
+                                    type="submit"
+                                    disabled={isDuplicateService}
+                                    className={`flex-1 px-4 py-3 font-bold rounded-xl transition-colors shadow-lg ${isDuplicateService
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'}`}
+                                >
+                                    {isDuplicateService ? 'Duplicate Service' : 'Save Service'}
+                                </button>
                             </div>
                         </form>
                     </div>

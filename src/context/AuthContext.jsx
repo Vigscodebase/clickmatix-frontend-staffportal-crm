@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from '../lib/axios';
+import { useLocation } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -8,6 +9,35 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const location = useLocation(); // Tracks whenever the URL/Route changes
+
+    // Extract the background sync logic into a reusable function
+    const silentSyncProfile = async () => {
+        try {
+            const response = await axios.get('/api/profile');
+            const freshUser = response.data.user;
+            const freshToken = response.data.token; // Fresh token from backend
+
+            if (typeof freshUser.permissions === 'string') {
+                try { freshUser.permissions = JSON.parse(freshUser.permissions); }
+                catch (e) { freshUser.permissions = []; }
+            }
+
+            // Update local storage and headers silently
+            localStorage.setItem('token', freshToken);
+            localStorage.setItem('user', JSON.stringify(freshUser));
+            axios.defaults.headers.common['Authorization'] = `Bearer ${freshToken}`;
+
+            // Only update the React state if the user data actually changed 
+            // (this prevents unnecessary screen flickering)
+            setUser(prevUser => JSON.stringify(prevUser) !== JSON.stringify(freshUser) ? freshUser : prevUser);
+        } catch (error) {
+            // If the token expired or user was deleted, log them out
+            if (error.response?.status === 401) {
+                logout();
+            }
+        }
+    };
 
     useEffect(() => {
         const initAuth = async () => {
@@ -23,34 +53,43 @@ export const AuthProvider = ({ children }) => {
                 }
                 setUser(parsedUser);
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
+                // Perform the initial silent sync
+                await silentSyncProfile();
                 // 2. SILENT BACKGROUND SYNC: Fetch latest permissions on refresh
-                try {
-                    const response = await axios.get('/api/profile');
-                    const freshUser = response.data.user;
-                    const freshToken = response.data.token; // The new token from backend
+                // try {
+                //     const response = await axios.get('/api/profile');
+                //     const freshUser = response.data.user;
+                //     const freshToken = response.data.token; // The new token from backend
 
-                    // 3. Update local storage and state with the fresh data
-                    localStorage.setItem('user', JSON.stringify(freshUser));
-                    localStorage.setItem('token', freshToken);
-                    axios.defaults.headers.common['Authorization'] = `Bearer ${freshToken}`;
+                //     // 3. Update local storage and state with the fresh data
+                //     localStorage.setItem('user', JSON.stringify(freshUser));
+                //     localStorage.setItem('token', freshToken);
+                //     axios.defaults.headers.common['Authorization'] = `Bearer ${freshToken}`;
 
-                    setUser(freshUser); // This triggers the re-render to hide/show buttons
-                } catch (error) {
-                    console.error("Failed to sync session:", error);
-                    // If the backend says token is entirely invalid, log them out
-                    if (error.response?.status === 401) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
-                        setUser(null);
-                    }
-                }
+                //     setUser(freshUser); // This triggers the re-render to hide/show buttons
+                // } catch (error) {
+                //     console.error("Failed to sync session:", error);
+                //     // If the backend says token is entirely invalid, log them out
+                //     if (error.response?.status === 401) {
+                //         localStorage.removeItem('token');
+                //         localStorage.removeItem('user');
+                //         setUser(null);
+                //     }
+                // }
             }
             setLoading(false);
         };
 
         initAuth();
     }, []);
+
+    // 2. Navigation Sync (Runs seamlessly on EVERY route change/link click)
+    useEffect(() => {
+        // Only trigger this if the user is already logged in and initial load is done
+        if (user && !loading) {
+            silentSyncProfile();
+        }
+    }, [location.pathname]); // This dependency array is the magic fix!
 
     const hasPermission = (perm) => {
         if (!user) return false;
