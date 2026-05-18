@@ -8,6 +8,15 @@ export default function Notifications() {
 
     useEffect(() => {
         fetchNotifications();
+
+        // --- FIX: Instantly refresh list when WebSocket fires 'notificationReceived' ---
+        const handleNewNotification = () => fetchNotifications();
+        window.addEventListener('notificationReceived', handleNewNotification);
+
+        return () => {
+            window.removeEventListener('notificationReceived', handleNewNotification);
+        };
+        // -----------------------------------------------------------------------------
     }, []);
 
     const fetchNotifications = async () => {
@@ -22,10 +31,10 @@ export default function Notifications() {
     };
 
     const markAsRead = async (id) => {
-        // 1. OPTIMISTIC UPDATE: Instantly turn it grey on the screen!
+        // 1. OPTIMISTIC UPDATE: Instantly turn it grey!
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
 
-        // 2. Dispatch a global event so your Sidebar/Navbar badge updates instantly!
+        // 2. Dispatch instant decrement to Sidebar
         window.dispatchEvent(new Event('notificationRead'));
 
         try {
@@ -33,8 +42,12 @@ export default function Notifications() {
             await axios.patch(`/api/notifications/${id}/read`);
         } catch (err) {
             console.error('Failed to mark as read', err);
-            // Revert back if the server actually failed
+
+            // 4. FALLBACK: Revert the local list back to unread
             fetchNotifications();
+
+            // 5. Tell the Sidebar its math is wrong and it needs to fetch the real number!
+            window.dispatchEvent(new Event('notificationRefresh'));
         }
     };
 
@@ -68,7 +81,7 @@ export default function Notifications() {
                             <div
                                 key={n.id}
                                 onClick={() => !n.is_read && markAsRead(n.id)}
-                                className={`flex items-start gap-4 p-4 rounded-2xl border transition-all ${!n.is_read ? 'cursor-pointer border-blue-100 bg-blue-50/20 shadow-sm shadow-blue-100/50 hover:border-blue-200' : 'bg-gray-50 border-gray-100 opacity-75'}`}
+                                className={`flex items-start gap-4 p-4 rounded-2xl border transition-all ${!n.is_read ? 'cursor-pointer border-blue-100 bg-white shadow-sm shadow-blue-100/50 hover:border-blue-200' : 'bg-gray-50 border-gray-100 opacity-75'}`}
                             >
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${n.is_read ? 'bg-gray-100' : 'bg-blue-100'}`}>
                                     {getIcon(n.type)}

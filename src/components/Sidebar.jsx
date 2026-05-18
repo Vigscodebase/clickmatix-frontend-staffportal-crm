@@ -22,10 +22,45 @@ export default function Sidebar() {
     useEffect(() => {
         if (user) {
             fetchUnreadCount();
-            const interval = setInterval(fetchUnreadCount, 300);
-            return () => clearInterval(interval);
+
+            // --- FIX: REAL-TIME WEBSOCKET CONNECTION ---
+            const token = localStorage.getItem('token');
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Assuming your backend runs on port 5000 of the same hostname
+            const wsUrl = `${protocol}//${window.location.hostname}:5000?token=${token}`;
+
+            const ws = new WebSocket(wsUrl);
+
+            // Listen for the push notification from the server
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.event === 'new_notification') {
+                    // Instantly update badge count
+                    fetchUnreadCount();
+                    // Alert the Notifications page to refresh if it's currently open
+                    window.dispatchEvent(new Event('notificationReceived'));
+                }
+            };
+
+            // Listen for internal "Read" clicks to instantly drop the counter
+            const handleNotificationRead = () => {
+                setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+            };
+            window.addEventListener('notificationRead', handleNotificationRead);
+
+            // --- THE FALLBACK LISTENER ---
+            // If the server fails, Notifications.jsx fires this, and we fetch the real number again
+            const handleFullRefresh = () => fetchUnreadCount();
+            window.addEventListener('notificationRefresh', handleFullRefresh);
+
+            return () => {
+                ws.close();
+                window.removeEventListener('notificationRead', handleNotificationRead);
+                window.removeEventListener('notificationRefresh', handleFullRefresh);
+            };
+            // -------------------------------------------
         }
-    }, [user?.id]); // Only re-run if user ID changes
+    }, [user?.id]);
 
     const fetchUnreadCount = async () => {
         if (isFetching.current) return;
@@ -47,13 +82,10 @@ export default function Sidebar() {
 
     const menuItems = [
         { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-        // ...(user?.role !== 'sales' ? [{ label: 'Projects', icon: Briefcase, path: '/projects' }] : []),
         { label: 'Projects', icon: Briefcase, path: '/projects' },
-        // ✅ Hide Clients
         ...(!blockedClientRoles.includes(user?.role)
             ? [{ label: 'Clients', icon: Users, path: '/clients' }]
             : []),
-        // { label: 'Clients', icon: Users, path: '/clients' },
         { label: 'Notifications', icon: Bell, path: '/notifications', badge: unreadCount },
         ...(canManageUsers ? [
             { label: 'User Management', icon: ShieldCheck, path: '/users' },
@@ -106,9 +138,6 @@ export default function Sidebar() {
 
             <div className="p-4 border-t border-gray-800 bg-gray-900/50">
                 <div className="flex items-center gap-3 px-4 py-3 mb-4 bg-gray-800/40 rounded-2xl border border-gray-800">
-                    {/* <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-sm font-bold shadow-inner">
-                        {user?.name?.charAt(0) || 'U'}
-                    </div> */}
                     {user?.avatar_url ? (
                         <img src={user.avatar_url} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
                     ) : (

@@ -118,7 +118,7 @@ export default function Dashboard() {
                     color="bg-blue-600"
                 />
 
-                {/* Revenue Stats: FIX: Now visible to Finance Users as well */}
+                {/* Revenue Stats: Visible to Admins, Finance, or Permission */}
                 {(isAdmin || isFinance || hasPermission('view_revenue')) && (
                     <>
                         <StatCard
@@ -255,7 +255,6 @@ export default function Dashboard() {
                                 <tbody className="divide-y divide-gray-100">
                                     {accountManagers.map((am) => (
                                         <tr key={am.name} className="hover:bg-gray-50 transition-colors">
-                                            {/* FIX: Handled "Unassigned" styling gracefully */}
                                             <td className="px-6 py-4 flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${am.name === 'Unassigned' ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-700'}`}>
                                                     {am.name === 'Unassigned' ? '?' : am.name.charAt(0)}
@@ -290,9 +289,9 @@ export default function Dashboard() {
                                 <thead className="text-gray-400 uppercase font-black tracking-widest bg-gray-50/50">
                                     <tr>
                                         <th className="px-6 py-4">Client</th>
-                                        <th className="px-6 py-4">Agreement</th>
-                                        <th className="px-6 py-4">Payment</th>
-                                        <th className="px-6 py-4">Action</th>
+                                        <th className="px-6 py-4 text-center">Agreement</th>
+                                        <th className="px-6 py-4 text-center">Payment</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -301,18 +300,23 @@ export default function Dashboard() {
                                             <td className="px-6 py-4">
                                                 <span className="font-bold text-gray-900 uppercase">{c.name}</span>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center">
                                                 <span className={`px-2 py-1 rounded-md font-bold uppercase text-[9px] ${c.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                     {c.agreement_status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center">
                                                 <span className={`px-2 py-1 rounded-md font-bold uppercase text-[9px] ${c.invoice_status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
                                                     {c.invoice_status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right text-indigo-600 font-bold uppercase tracking-tight">
-                                                <button onClick={() => navigate(`/clients/${c.id}`)}>Review</button>
+                                            <td className="px-6 py-4 text-center text-indigo-600 font-bold uppercase tracking-tight">
+                                                <button
+                                                    onClick={() => navigate(`/clients/${c.id}`)}
+                                                    className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                                                >
+                                                    Review
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -336,23 +340,28 @@ export default function Dashboard() {
                                 <thead className="text-gray-400 uppercase font-black tracking-widest bg-gray-50/50">
                                     <tr>
                                         <th className="px-6 py-4">Client</th>
-                                        <th className="px-6 py-4">Missing AM</th>
-                                        <th className="px-6 py-4">Action</th>
+                                        <th className="px-6 py-4 text-center">Missing AM</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {pendingAssignmentClients.map((c) => (
                                         <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 font-bold text-gray-900 uppercase">{c.name}</td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center">
                                                 {!c.account_manager_id ? (
                                                     <span className="text-rose-600 font-bold uppercase text-[9px]">Required</span>
                                                 ) : (
                                                     <span className="text-green-600 font-bold uppercase text-[9px]">Assigned</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right text-indigo-600 font-bold uppercase tracking-tight">
-                                                <button onClick={() => navigate(`/clients/${c.id}`)}>Assign</button>
+                                            <td className="px-6 py-4 text-center text-indigo-600 font-bold uppercase tracking-tight">
+                                                <button
+                                                    onClick={() => navigate(`/clients/${c.id}`)}
+                                                    className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
+                                                    Assign
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -376,17 +385,22 @@ export default function Dashboard() {
                                 <thead className="text-gray-400 uppercase font-black tracking-widest bg-gray-50/50">
                                     <tr>
                                         <th className="px-6 py-4">Client</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Action</th>
+                                        <th className="px-6 py-4 text-center">Status</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {pendingOnboardingClients.map((c) => (
                                         <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 font-bold text-gray-900 uppercase">{c.name}</td>
-                                            <td className="px-6 py-4 font-bold text-rose-600 uppercase text-[9px]">Needs Documentation</td>
-                                            <td className="px-6 py-4 text-right text-indigo-600 font-bold uppercase tracking-tight">
-                                                <button onClick={() => navigate(`/clients/${c.id}`)}>Onboard</button>
+                                            <td className="px-6 py-4 text-center font-bold text-rose-600 uppercase text-[9px]">Needs Documentation</td>
+                                            <td className="px-6 py-4 text-center text-indigo-600 font-bold uppercase tracking-tight">
+                                                <button
+                                                    onClick={() => navigate(`/clients/${c.id}`)}
+                                                    className="px-4 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                                                >
+                                                    Onboard
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

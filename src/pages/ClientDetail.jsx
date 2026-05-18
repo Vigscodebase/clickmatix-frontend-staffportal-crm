@@ -528,7 +528,7 @@ export default function ClientDetail() {
                                     </div>
                                 )}
 
-                                {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
+                                {/* {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Service Team Leads Assignment</label>
                                         <div className="space-y-2">
@@ -549,12 +549,12 @@ export default function ClientDetail() {
                                             ))}
                                         </div>
                                     </div>
-                                )}
+                                )} */}
                             </div>
                         </div>
                     )}
 
-                    {(isSuperAdmin || user?.id === client.account_manager_id) && (client.account_manager_id) && (
+                    {(isSuperAdmin || client.account_manager_id) && (
                         <div className="mt-6 p-4 bg-green-50/50 rounded-xl border border-green-100">
                             <h3 className="text-xs font-black text-green-900 uppercase tracking-widest mb-4">Onboarding Documentation</h3>
                             <form onSubmit={handleCompleteOnboarding} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -666,7 +666,18 @@ export default function ClientDetail() {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {(user?.role === 'super_admin' || user?.role === 'account_manager' || user?.role === 'am_head') && (
+                                        {/* {(user?.role === 'super_admin' || user?.role === 'account_manager' || user?.role === 'am_head') && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteService(service.id);
+                                                }}
+                                                className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )} */}
+                                        {canDelete && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
