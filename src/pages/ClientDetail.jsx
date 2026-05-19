@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../lib/axios';
 import {
@@ -8,7 +8,27 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+// --- REACT QUILL IMPORTS ---
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
 const VERSION = "V2_DEBUG";
+
+// --- FULL QUILL TOOLBAR CONFIGURATION ---
+const quillModules = {
+    toolbar: [
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }, { 'font': [] }],
+        [{ 'size': [] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'script': 'sub' }, { 'script': 'super' }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        //['link', 'image', 'video'],
+        ['image'],
+        ['clean'] // remove formatting button
+    ]
+};
 
 export default function ClientDetail() {
     const { id } = useParams();
@@ -16,6 +36,13 @@ export default function ClientDetail() {
     const navigate = useNavigate();
     const [client, setClient] = useState(null);
     const [services, setServices] = useState([]);
+
+    // Notes State
+    const [notes, setNotes] = useState([]);
+    const [noteContent, setNoteContent] = useState('');
+    const [showNoteEditor, setShowNoteEditor] = useState(false);
+    const [editingNoteId, setEditingNoteId] = useState(null);
+
     const [staff, setStaff] = useState([]);
     const [expandedService, setExpandedService] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -24,6 +51,8 @@ export default function ClientDetail() {
 
     const [clientModalOpen, setClientModalOpen] = useState(false);
     const [serviceModalOpen, setServiceModalOpen] = useState(false);
+    // Add this near your other state declarations
+    const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
 
     const [editingClient, setEditingClient] = useState({
         name: '', email: '', phone: '', domain: '',
@@ -72,6 +101,8 @@ export default function ClientDetail() {
 
             setClient(res.data.client);
             setServices(res.data.services || []);
+            setNotes(res.data.notes || []); // Sync notes
+
             setEditingClient({
                 name: res.data.client.name || '',
                 email: res.data.client.email || '',
@@ -138,7 +169,6 @@ export default function ClientDetail() {
         try {
             await axios.patch(`/api/clients/${id}/assign`, payload);
             fetchClientData();
-            alert('Staff assigned successfully');
         } catch (err) {
             alert('Failed to assign staff');
         }
@@ -146,15 +176,44 @@ export default function ClientDetail() {
 
     const handleCompleteOnboarding = async (e) => {
         e.preventDefault();
+        setIsSavingOnboarding(true); // Turn on loader
         try {
             await axios.patch(`/api/clients/${id}/onboarding`, {
                 onboarding_date: editingClient.onboarding_date,
                 onboarding_pdf_url: editingClient.onboarding_pdf_url
             });
             fetchClientData();
-            alert('Onboarding documentation saved');
+            //alert('Onboarding documentation saved');
         } catch (err) {
             alert('Failed to save onboarding documentation');
+        } finally {
+            setIsSavingOnboarding(false); // Turn off loader when done
+        }
+    };
+
+    const handleSaveNote = async () => {
+        try {
+            if (editingNoteId) {
+                await axios.put(`/api/notes/${editingNoteId}`, { content: noteContent });
+            } else {
+                await axios.post(`/api/clients/${id}/notes`, { content: noteContent });
+            }
+            setShowNoteEditor(false);
+            setNoteContent('');
+            setEditingNoteId(null);
+            fetchClientData();
+        } catch (err) {
+            alert('Failed to save note');
+        }
+    };
+
+    const handleDeleteNote = async (noteId) => {
+        if (!window.confirm('Delete this note permanently?')) return;
+        try {
+            await axios.delete(`/api/notes/${noteId}`);
+            fetchClientData();
+        } catch (err) {
+            alert('Failed to delete note');
         }
     };
 
@@ -222,8 +281,11 @@ export default function ClientDetail() {
     const canEditTL = isSuperAdmin || isFinance;
     const canEditAM = isSuperAdmin || isFinance;
 
-    // --- FIX: Strictly control individual Team Lead dropdown visibility ---
     const canSeeTLDropdown = user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager';
+
+    // --- Notes Permissions ---
+    const canManageNotes = isSuperAdmin || user?.role === 'am_head';
+    const canViewNotes = canManageNotes || user?.role === 'account_manager';
 
     const getTrafficLightColor = (status, color) => {
         if (color) {
@@ -506,13 +568,13 @@ export default function ClientDetail() {
                         </div>
                     )}
 
-                    {(user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
-                        <div className="mt-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                            <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest mb-4">Departmental Assignments</h3>
+                    {step3Done && (user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (
+                        <div className="mt-6 p-4 rounded-xl border border-black-100">
+                            <h3 className="text-xs font-black text-black-900 uppercase tracking-widest mb-4">Departmental Assignments</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {(isSuperAdmin || user?.role === 'am_head') && (
                                     <div className="space-y-3">
-                                        <label className="block text-[10px] font-bold text-blue-700 uppercase">Account Manager Assignment</label>
+                                        <label className="block text-[10px] font-bold text-black-700 uppercase">Account Manager Assignment</label>
                                         <div className="flex gap-2">
                                             <select
                                                 className="flex-1 text-xs border rounded p-1.5 bg-white"
@@ -528,7 +590,7 @@ export default function ClientDetail() {
                                     </div>
                                 )}
 
-                                {/* {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
+                                {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Service Team Leads Assignment</label>
                                         <div className="space-y-2">
@@ -549,17 +611,17 @@ export default function ClientDetail() {
                                             ))}
                                         </div>
                                     </div>
-                                )} */}
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {(isSuperAdmin || client.account_manager_id) && (
-                        <div className="mt-6 p-4 bg-green-50/50 rounded-xl border border-green-100">
-                            <h3 className="text-xs font-black text-green-900 uppercase tracking-widest mb-4">Onboarding Documentation</h3>
+                    {step3Done && (user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (isSuperAdmin || client.account_manager_id) && (
+                        <div className="mt-6 p-4 rounded-xl border border-black-100">
+                            <h3 className="text-xs font-black text-black-900 uppercase tracking-widest mb-4">Onboarding Documentation</h3>
                             <form onSubmit={handleCompleteOnboarding} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-3">
-                                    <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Date</label>
+                                    <label className="block text-[10px] font-bold text-black-700 uppercase">Onboarding Date</label>
                                     <input
                                         type="date"
                                         className="w-full text-xs border rounded p-1.5 bg-white"
@@ -568,7 +630,7 @@ export default function ClientDetail() {
                                         required
                                     />
                                 </div>
-                                <div className="space-y-3">
+                                {/* <div className="space-y-3">
                                     <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Discussion (PDF Link)</label>
                                     <div className="flex gap-2">
                                         <input
@@ -586,13 +648,123 @@ export default function ClientDetail() {
                                             Simulate Upload
                                         </button>
                                     </div>
-                                </div>
+                                </div> */}
+                                {/* --- REACT QUILL EDITOR --- */}
+                                {canViewNotes && (
+                                    <div className="md:col-span-2">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-xs font-black text-black-900 uppercase tracking-widest flex items-center gap-2">
+                                                <MessageSquare className="w-4 h-4" />
+                                                Onboarding Notes
+                                            </h4>
+                                            {canManageNotes && !showNoteEditor && (
+                                                <button
+                                                    onClick={() => { setShowNoteEditor(true); setNoteContent(''); setEditingNoteId(null); }}
+                                                    className="text-xs bg-rose-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-700 transition flex items-center gap-1 shadow-sm"
+                                                >
+                                                    <Plus className="w-3 h-3" /> Add Note
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {canManageNotes && showNoteEditor && (
+                                            <div className="bg-white p-4 rounded-xl border border-black-300 shadow-sm mb-6 animate-in fade-in zoom-in duration-200">
+
+                                                <div className="mb-4">
+                                                    <ReactQuill
+                                                        theme="snow"
+                                                        value={noteContent}
+                                                        onChange={setNoteContent}
+                                                        modules={quillModules}
+                                                        className="bg-white rounded-lg"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-3 justify-end mt-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setShowNoteEditor(false); setNoteContent(''); setEditingNoteId(null); }}
+                                                        className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSaveNote}
+                                                        disabled={!noteContent.trim() || noteContent === '<p><br></p>'} // ReactQuill empty state
+                                                        className="px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose    -700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {editingNoteId ? 'Update Note' : 'Save Note'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {notes.length === 0 && !showNoteEditor ? (
+                                            <div className="text-center py-6 bg-white/50 rounded-xl border border-dashed border-green-200">
+                                                <p className="text-xs text-green-700 font-medium">No additional notes added yet.</p>
+                                            </div>
+                                        ) : (
+                                            // conditionally added scroll if more than 4 items
+                                            <div className={`space-y-4 ${notes.length > 4 ? 'max-h-[600px] overflow-y-auto pr-2' : ''}`}>
+                                                {notes.map(note => (
+                                                    <div key={note.id} className="bg-white p-4 rounded-xl border border-black-200 shadow-sm relative group transition-all hover:border-black-300">
+
+                                                        {/* Added 'ql-editor' wrapper to ensure Quill default styling applies evenly */}
+                                                        <div className="ql-snow">
+                                                            <div
+                                                                className="ql-editor p-0 text-sm text-gray-800 leading-relaxed max-w-none"
+                                                                dangerouslySetInnerHTML={{ __html: note.content }}
+                                                            />
+                                                        </div>
+
+                                                        <div className="mt-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 pt-3">
+                                                            <div className="flex items-center gap-1.5 font-medium">
+                                                                <User className="w-3 h-3" />
+                                                                <span>Added by <span className="font-bold text-gray-600">{note.created_by_name}</span> on {new Date(note.created_at).toLocaleString()}</span>
+                                                            </div>
+                                                            {canManageNotes && (
+                                                                <div className="hidden group-hover:flex gap-4 items-center">
+                                                                    <button
+                                                                        onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content); setShowNoteEditor(true); }}
+                                                                        className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                    >
+                                                                        <Edit2 className="w-3 h-3" /> Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteNote(note.id)}
+                                                                        className="text-red-600 hover:text-red-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" /> Delete
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {/* -------------------------------------- */}
                                 <div className="md:col-span-2 flex justify-end">
-                                    <button type="submit" className="px-6 py-2 bg-green-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-green-700 transition-colors">
-                                        Save Onboarding Info
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingOnboarding}
+                                        className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+                                    >
+                                        {isSavingOnboarding ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            'Save Onboarding Info'
+                                        )}
                                     </button>
                                 </div>
                             </form>
+
                             {client.onboarding_pdf_url && (
                                 <div className="mt-4 p-2 bg-white rounded border border-green-200 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -603,6 +775,7 @@ export default function ClientDetail() {
                                     <span className="text-[10px] text-gray-400">Date: {client.onboarding_date}</span>
                                 </div>
                             )}
+
                         </div>
                     )}
                 </div>
@@ -666,17 +839,6 @@ export default function ClientDetail() {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {/* {(user?.role === 'super_admin' || user?.role === 'account_manager' || user?.role === 'am_head') && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteService(service.id);
-                                                }}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )} */}
                                         {canDelete && (
                                             <button
                                                 onClick={(e) => {
