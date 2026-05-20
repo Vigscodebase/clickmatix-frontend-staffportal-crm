@@ -79,7 +79,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(isAMHead || isAM || isManager) && (
+                    {(isAMHead || isManager) && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -132,7 +132,7 @@ export default function Dashboard() {
                 )}
 
                 {/* Invoice Stats: Hidden from Sales */}
-                {(!isSales && (isAdmin || isFinance || isAMHead || hasPermission('approve_finance') || hasPermission('view_revenue'))) && (
+                {(!isSales && (isAdmin || isFinance || isAMHead || isAM || hasPermission('approve_finance') || hasPermission('view_revenue'))) && (
                     <div className="bg-white p-6 rounded-2xl border border-blue-50 hover:shadow-lg transition-all flex flex-col justify-between shadow-sm">
                         <div className="flex justify-between items-start mb-4">
                             <div>

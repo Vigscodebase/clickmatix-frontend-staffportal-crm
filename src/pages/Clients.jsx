@@ -104,6 +104,9 @@ export default function Clients() {
     const canAdd = hasPermission('can_add');
     const canApproveFinance = user?.role === 'finance' || user?.role === 'super_admin';
 
+    // FIX: Show toggle to anyone with Full Access or MMs/DMs
+    const canToggleView = ['am_head', 'marketing_manager', 'dev_manager'].includes(user?.role)
+
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
         if (s === 'active') return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' };
@@ -129,7 +132,7 @@ export default function Clients() {
                     <p className="text-gray-500 mt-1">Full list of clients and managed services.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
+                    {canToggleView && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}

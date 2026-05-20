@@ -590,7 +590,7 @@ export default function ClientDetail() {
                                     </div>
                                 )}
 
-                                {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
+                                {/* {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Service Team Leads Assignment</label>
                                         <div className="space-y-2">
@@ -611,7 +611,7 @@ export default function ClientDetail() {
                                             ))}
                                         </div>
                                     </div>
-                                )}
+                                )} */}
                             </div>
                         </div>
                     )}
@@ -884,6 +884,111 @@ export default function ClientDetail() {
                     ))
                 )}
             </div>
+
+            {clientModalOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <h2 className="text-xl font-bold text-gray-900">Edit Client Information</h2>
+                            <button onClick={() => setClientModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleUpdateClient} className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Client Name</label>
+                                    <input
+                                        type="text" required
+                                        value={editingClient.name}
+                                        onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                                        className={unifiedInputClass}
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Domain</label>
+                                    <input
+                                        type="text"
+                                        value={editingClient.domain}
+                                        onChange={(e) => setEditingClient({ ...editingClient, domain: e.target.value })}
+                                        className={unifiedInputClass}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
+                                    <input
+                                        type="email"
+                                        value={editingClient.email}
+                                        onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                                        className={unifiedInputClass}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Phone</label>
+                                    <input
+                                        type="text"
+                                        value={editingClient.phone}
+                                        onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                                        className={unifiedInputClass}
+                                    />
+                                </div>
+                                {/* <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Account Manager</label>
+                                    <select
+                                        disabled={!canEditAM || isSales}
+                                        value={editingClient.account_manager_id}
+                                        onChange={(e) => setEditingClient({ ...editingClient, account_manager_id: e.target.value })}
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                    >
+                                        <option value="">Select Manager</option>
+                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Marketing Manager</label>
+                                    <select
+                                        disabled={!canEditMM || isSales}
+                                        value={editingClient.marketing_manager_id}
+                                        onChange={(e) => setEditingClient({ ...editingClient, marketing_manager_id: e.target.value })}
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                    >
+                                        <option value="">Select Manager</option>
+                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Dev Manager</label>
+                                    <select
+                                        disabled={!canEditDM || isSales}
+                                        value={editingClient.dev_manager_id}
+                                        onChange={(e) => setEditingClient({ ...editingClient, dev_manager_id: e.target.value })}
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                    >
+                                        <option value="">Select Manager</option>
+                                        {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.department})</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
+                                    <select
+                                        disabled={!isSuperAdmin || isSales}
+                                        value={editingClient.am_head_id}
+                                        onChange={(e) => setEditingClient({ ...editingClient, am_head_id: e.target.value })}
+                                        className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                    >
+                                        <option value="">Select AM Head</option>
+                                        {staff.filter(s => s.role === 'am_head').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div> */}
+                            </div>
+                            <div className="pt-4 flex gap-3">
+                                <button type="button" onClick={() => setClientModalOpen(false)} className="flex-1 px-4 py-2 border rounded-xl">Cancel</button>
+                                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Add/Edit Service Modal */}
             {serviceModalOpen && (
