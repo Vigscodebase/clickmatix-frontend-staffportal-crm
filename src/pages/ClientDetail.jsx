@@ -590,7 +590,7 @@ export default function ClientDetail() {
                                     </div>
                                 )}
 
-                                {/* {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
+                                {(user?.role === 'super_admin' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                                     <div className="space-y-3">
                                         <label className="block text-[10px] font-bold text-blue-700 uppercase">Service Team Leads Assignment</label>
                                         <div className="space-y-2">
@@ -603,7 +603,7 @@ export default function ClientDetail() {
                                                         onChange={(e) => handleAssignStaff({ tl_id: e.target.value, service_type: svc.type })}
                                                     >
                                                         <option value="">Assign TL</option>
-                                                        {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
+                                                        {staff.filter(s => ['marketing_manager', 'seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
                                                             <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
                                                         ))}
                                                     </select>
@@ -611,7 +611,7 @@ export default function ClientDetail() {
                                             ))}
                                         </div>
                                     </div>
-                                )} */}
+                                )}
                             </div>
                         </div>
                     )}
@@ -629,6 +629,23 @@ export default function ClientDetail() {
                                         onChange={(e) => setEditingClient({ ...editingClient, onboarding_date: e.target.value })}
                                         required
                                     />
+                                </div>
+                                {/* -------------------------------------- */}
+                                <div className="md:col-span-2 flex justify-end">
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingOnboarding}
+                                        className="flex items-center gap-2 h-1/2 px-3 py-1.5 bg-rose-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+                                    >
+                                        {isSavingOnboarding ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            'Save Onboarding Date'
+                                        )}
+                                    </button>
                                 </div>
                                 {/* <div className="space-y-3">
                                     <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Discussion (PDF Link)</label>
@@ -651,118 +668,104 @@ export default function ClientDetail() {
                                 </div> */}
                                 {/* --- REACT QUILL EDITOR --- */}
                                 {canViewNotes && (
-                                    <div className="md:col-span-2">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="text-xs font-black text-black-900 uppercase tracking-widest flex items-center gap-2">
-                                                <MessageSquare className="w-4 h-4" />
-                                                Onboarding Notes
-                                            </h4>
-                                            {canManageNotes && !showNoteEditor && (
-                                                <button
-                                                    onClick={() => { setShowNoteEditor(true); setNoteContent(''); setEditingNoteId(null); }}
-                                                    className="text-xs bg-rose-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-700 transition flex items-center gap-1 shadow-sm"
-                                                >
-                                                    <Plus className="w-3 h-3" /> Add Note
-                                                </button>
+                                    <div className="md:col-span-3 mt-2 border-t pt-4">
+                                        <div className="md:col-span-2">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h4 className="text-xs font-black text-black-900 uppercase tracking-widest flex items-center gap-2">
+                                                    <MessageSquare className="w-4 h-4" />
+                                                    Onboarding Notes
+                                                </h4>
+                                                {canManageNotes && !showNoteEditor && (
+                                                    <button
+                                                        onClick={() => { setShowNoteEditor(true); setNoteContent(''); setEditingNoteId(null); }}
+                                                        className="text-xs bg-rose-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-700 transition flex items-center gap-1 shadow-sm"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Add Note
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {canManageNotes && showNoteEditor && (
+                                                <div className="bg-white p-4 rounded-xl border border-black-300 shadow-sm mb-6 animate-in fade-in zoom-in duration-200">
+
+                                                    <div className="mb-4">
+                                                        <ReactQuill
+                                                            theme="snow"
+                                                            value={noteContent}
+                                                            onChange={setNoteContent}
+                                                            modules={quillModules}
+                                                            className="bg-white rounded-lg"
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex gap-3 justify-end mt-4">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setShowNoteEditor(false); setNoteContent(''); setEditingNoteId(null); }}
+                                                            className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSaveNote}
+                                                            disabled={!noteContent.trim() || noteContent === '<p><br></p>'} // ReactQuill empty state
+                                                            className="px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose    -700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {editingNoteId ? 'Update Note' : 'Save Note'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {notes.length === 0 && !showNoteEditor ? (
+                                                <div className="text-center py-6 bg-white/50 rounded-xl border border-dashed border-black-200">
+                                                    <p className="text-xs text-black-700 font-medium">No additional notes added yet.</p>
+                                                </div>
+                                            ) : (
+                                                // conditionally added scroll if more than 4 items
+                                                <div className={`space-y-4 ${notes.length > 4 ? 'max-h-[600px] overflow-y-auto pr-2' : ''}`}>
+                                                    {notes.map(note => (
+                                                        <div key={note.id} className="bg-white p-4 rounded-xl border border-black-200 shadow-sm relative group transition-all hover:border-black-300">
+
+                                                            {/* Added 'ql-editor' wrapper to ensure Quill default styling applies evenly */}
+                                                            <div className="ql-snow">
+                                                                <div
+                                                                    className="ql-editor p-0 text-sm text-gray-800 leading-relaxed max-w-none"
+                                                                    dangerouslySetInnerHTML={{ __html: note.content }}
+                                                                />
+                                                            </div>
+
+                                                            <div className="mt-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 pt-3">
+                                                                <div className="flex items-center gap-1.5 font-medium">
+                                                                    <User className="w-3 h-3" />
+                                                                    <span>Added by <span className="font-bold text-gray-600">{note.created_by_name}</span> on {new Date(note.created_at).toLocaleString()}</span>
+                                                                </div>
+                                                                {canManageNotes && (
+                                                                    <div className="hidden group-hover:flex gap-4 items-center">
+                                                                        <button
+                                                                            onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content); setShowNoteEditor(true); }}
+                                                                            className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                        >
+                                                                            <Edit2 className="w-3 h-3" /> Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteNote(note.id)}
+                                                                            className="text-red-600 hover:text-red-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                        >
+                                                                            <Trash2 className="w-3 h-3" /> Delete
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
-
-                                        {canManageNotes && showNoteEditor && (
-                                            <div className="bg-white p-4 rounded-xl border border-black-300 shadow-sm mb-6 animate-in fade-in zoom-in duration-200">
-
-                                                <div className="mb-4">
-                                                    <ReactQuill
-                                                        theme="snow"
-                                                        value={noteContent}
-                                                        onChange={setNoteContent}
-                                                        modules={quillModules}
-                                                        className="bg-white rounded-lg"
-                                                    />
-                                                </div>
-
-                                                <div className="flex gap-3 justify-end mt-4">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { setShowNoteEditor(false); setNoteContent(''); setEditingNoteId(null); }}
-                                                        className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleSaveNote}
-                                                        disabled={!noteContent.trim() || noteContent === '<p><br></p>'} // ReactQuill empty state
-                                                        className="px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose    -700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {editingNoteId ? 'Update Note' : 'Save Note'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {notes.length === 0 && !showNoteEditor ? (
-                                            <div className="text-center py-6 bg-white/50 rounded-xl border border-dashed border-green-200">
-                                                <p className="text-xs text-green-700 font-medium">No additional notes added yet.</p>
-                                            </div>
-                                        ) : (
-                                            // conditionally added scroll if more than 4 items
-                                            <div className={`space-y-4 ${notes.length > 4 ? 'max-h-[600px] overflow-y-auto pr-2' : ''}`}>
-                                                {notes.map(note => (
-                                                    <div key={note.id} className="bg-white p-4 rounded-xl border border-black-200 shadow-sm relative group transition-all hover:border-black-300">
-
-                                                        {/* Added 'ql-editor' wrapper to ensure Quill default styling applies evenly */}
-                                                        <div className="ql-snow">
-                                                            <div
-                                                                className="ql-editor p-0 text-sm text-gray-800 leading-relaxed max-w-none"
-                                                                dangerouslySetInnerHTML={{ __html: note.content }}
-                                                            />
-                                                        </div>
-
-                                                        <div className="mt-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 pt-3">
-                                                            <div className="flex items-center gap-1.5 font-medium">
-                                                                <User className="w-3 h-3" />
-                                                                <span>Added by <span className="font-bold text-gray-600">{note.created_by_name}</span> on {new Date(note.created_at).toLocaleString()}</span>
-                                                            </div>
-                                                            {canManageNotes && (
-                                                                <div className="hidden group-hover:flex gap-4 items-center">
-                                                                    <button
-                                                                        onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content); setShowNoteEditor(true); }}
-                                                                        className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase tracking-wider"
-                                                                    >
-                                                                        <Edit2 className="w-3 h-3" /> Edit
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteNote(note.id)}
-                                                                        className="text-red-600 hover:text-red-800 font-bold flex items-center gap-1 uppercase tracking-wider"
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3" /> Delete
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
                                     </div>
                                 )}
-                                {/* -------------------------------------- */}
-                                <div className="md:col-span-2 flex justify-end">
-                                    <button
-                                        type="submit"
-                                        disabled={isSavingOnboarding}
-                                        className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
-                                    >
-                                        {isSavingOnboarding ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            'Save Onboarding Info'
-                                        )}
-                                    </button>
-                                </div>
+
                             </form>
 
                             {client.onboarding_pdf_url && (
@@ -857,7 +860,7 @@ export default function ClientDetail() {
 
                             {expandedService === service.id && (
                                 <div className={`border-t border-gray-200 p-4 bg-gray-50 grid ${canSeeTLDropdown ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                                    {canSeeTLDropdown && (
+                                    {/* {canSeeTLDropdown && (
                                         <div>
                                             <p className="text-sm text-gray-600 mb-1">Team Lead</p>
                                             <div className="flex items-center gap-2">
@@ -873,7 +876,7 @@ export default function ClientDetail() {
                                                 </select>
                                             </div>
                                         </div>
-                                    )}
+                                    )} */}
                                     <div>
                                         <p className="text-sm text-gray-600 mb-1">Service Status</p>
                                         <span className="text-sm font-medium text-gray-900">{service.status || 'Active'}</span>

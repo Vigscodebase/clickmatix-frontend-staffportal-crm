@@ -372,7 +372,7 @@ export default function Dashboard() {
                 )}
 
                 {/* AM Onboarding Queue */}
-                {(isAM || isAdmin) && pendingOnboardingClients.length > 0 && (
+                {(isAdmin) && pendingOnboardingClients.length > 0 && (
                     <div className="lg:col-span-2 mt-4 rounded-2xl border border-green-200 bg-green-50/10 overflow-hidden">
                         <div className="p-6 border-b border-green-200 bg-green-100/50 flex items-center justify-between">
                             <h2 className="font-bold text-green-900 flex items-center gap-2">
