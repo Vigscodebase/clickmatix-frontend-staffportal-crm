@@ -257,13 +257,23 @@ export default function ClientDetail() {
         }
     };
 
+    // const handleDeleteClient = async () => {
+    //     if (!window.confirm('Are you absolutely sure? This will delete the client and all their services.')) return;
+    //     try {
+    //         await axios.delete(`/api/clients/${id}`);
+    //         navigate('/clients');
+    //     } catch (err) {
+    //         alert('Failed to delete client');
+    //     }
+    // };
+
     const handleDeleteClient = async () => {
-        if (!window.confirm('Are you absolutely sure? This will delete the client and all their services.')) return;
+        if (!window.confirm("Are you sure? This will archive the client and remove them from the system.")) return;
         try {
             await axios.delete(`/api/clients/${id}`);
-            navigate('/clients');
+            navigate('/clients'); // Navigate back to the list
         } catch (err) {
-            alert('Failed to delete client');
+            alert("Failed to delete client: " + err.message);
         }
     };
 
