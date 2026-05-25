@@ -28,7 +28,7 @@ export default function Dashboard() {
     const isAMHead = user?.role === 'am_head';
     const isAM = user?.role === 'account_manager';
     const isManager = user?.role === 'marketing_manager' || user?.role === 'dev_manager';
-    const isTL = ['seo_specialist', 'ads_specialist', 'staff'].includes(user?.role) || user?.department?.includes('TL');
+    const isTL = ['seo_specialist', 'ads_specialist'].includes(user?.role) || user?.department?.includes('TL');
     const isAdmin = user?.role === 'super_admin' || user?.role === 'admin';
 
     useEffect(() => {
@@ -79,7 +79,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(isAMHead || isManager) && (
+                    {(isAMHead || isManager || isTL) && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 )}
 
                 {/* Account Managers / Team View */}
-                {(isAdmin || isAMHead || isFinance) && (
+                {(isAdmin || isAMHead || isFinance || isManager) && (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
