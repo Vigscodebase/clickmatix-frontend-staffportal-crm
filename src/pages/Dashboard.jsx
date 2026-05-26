@@ -79,7 +79,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(isAMHead || isManager || isTL) && (
+                    {(isAMHead || isAM || isManager || isTL) && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}

@@ -105,7 +105,7 @@ export default function Clients() {
     const canApproveFinance = user?.role === 'finance' || user?.role === 'super_admin';
 
     // FIX: Show toggle to anyone with Full Access or MMs/DMs
-    const canToggleView = ['am_head', 'marketing_manager', 'dev_manager', 'seo_specialist', 'ads_specialist'].includes(user?.role)
+    const canToggleView = ['am_head', 'account_manager', 'marketing_manager', 'dev_manager', 'seo_specialist', 'ads_specialist'].includes(user?.role)
 
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
