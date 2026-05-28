@@ -4,7 +4,7 @@ import axios from '../lib/axios';
 import {
     ArrowLeft, Mail, Phone, Globe, ChevronDown, ChevronUp, User,
     Star, Search, TrendingUp, Facebook, AtSign, MessageSquare,
-    Edit2, Trash2, Plus, X, Loader2, AlertCircle
+    Edit2, Trash2, Plus, X, Loader2, AlertCircle, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -53,6 +53,8 @@ export default function ClientDetail() {
     const [serviceModalOpen, setServiceModalOpen] = useState(false);
     // Add this near your other state declarations
     const [isSavingOnboarding, setIsSavingOnboarding] = useState(false);
+    // Add this state declaration
+    const [viewingNote, setViewingNote] = useState(null);
 
     const [editingClient, setEditingClient] = useState({
         name: '', email: '', phone: '', domain: '',
@@ -626,37 +628,41 @@ export default function ClientDetail() {
                         </div>
                     )}
 
-                    {step3Done && (user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (isSuperAdmin || client.account_manager_id) && (
+                    {step3Done && (user?.role === 'super_admin' || user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (client.agreement_status === 'Signed' && client.invoice_status === 'Paid') && (isSuperAdmin || client.account_manager_id) && (
                         <div className="mt-6 p-4 rounded-xl border border-black-100">
-                            <h3 className="text-xs font-black text-black-900 uppercase tracking-widest mb-4">Onboarding Documentation</h3>
+                            {canManageNotes && (<h3 className="text-xs font-black text-black-900 uppercase tracking-widest mb-4">Onboarding Documentation</h3>)}
                             <form onSubmit={handleCompleteOnboarding} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-3">
-                                    <label className="block text-[10px] font-bold text-black-700 uppercase">Onboarding Date</label>
-                                    <input
-                                        type="date"
-                                        className="w-full text-xs border rounded p-1.5 bg-white"
-                                        value={editingClient.onboarding_date}
-                                        onChange={(e) => setEditingClient({ ...editingClient, onboarding_date: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                {/* -------------------------------------- */}
-                                <div className="md:col-span-2 flex justify-end">
-                                    <button
-                                        type="submit"
-                                        disabled={isSavingOnboarding}
-                                        className="flex items-center gap-2 h-1/2 px-3 py-1.5 bg-rose-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
-                                    >
-                                        {isSavingOnboarding ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            'Save Onboarding Date'
-                                        )}
-                                    </button>
-                                </div>
+                                {canManageNotes && (
+                                    <>
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-bold text-black-700 uppercase">Onboarding Date</label>
+                                            <input
+                                                type="date"
+                                                className="w-full text-xs border rounded p-1.5 bg-white"
+                                                value={editingClient.onboarding_date}
+                                                onChange={(e) => setEditingClient({ ...editingClient, onboarding_date: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        {/* -------------------------------------- */}
+                                        <div className="md:col-span-2 flex justify-end">
+                                            <button
+                                                type="submit"
+                                                disabled={isSavingOnboarding}
+                                                className="flex items-center gap-2 h-1/2 px-3 py-1.5 bg-rose-600 text-white text-xs rounded-lg font-bold uppercase shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+                                            >
+                                                {isSavingOnboarding ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        Saving...
+                                                    </>
+                                                ) : (
+                                                    'Save Onboarding Date'
+                                                )}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                                 {/* <div className="space-y-3">
                                     <label className="block text-[10px] font-bold text-green-700 uppercase">Onboarding Discussion (PDF Link)</label>
                                     <div className="flex gap-2">
@@ -678,7 +684,7 @@ export default function ClientDetail() {
                                 </div> */}
                                 {/* --- REACT QUILL EDITOR --- */}
                                 {canViewNotes && (
-                                    <div className="md:col-span-3 mt-2 border-t pt-4">
+                                    <div className={`md:col-span-3 mt-2 ${canManageNotes && "border-t"} pt-4`}>
                                         <div className="md:col-span-2">
                                             <div className="flex justify-between items-center mb-4">
                                                 <h4 className="text-xs font-black text-black-900 uppercase tracking-widest flex items-center gap-2">
@@ -735,39 +741,79 @@ export default function ClientDetail() {
                                             ) : (
                                                 // conditionally added scroll if more than 4 items
                                                 <div className={`space-y-4 ${notes.length > 4 ? 'max-h-[600px] overflow-y-auto pr-2' : ''}`}>
+                                                    {/* <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2"> */}
                                                     {notes.map(note => (
                                                         <div key={note.id} className="bg-white p-4 rounded-xl border border-black-200 shadow-sm relative group transition-all hover:border-black-300">
 
-                                                            {/* Added 'ql-editor' wrapper to ensure Quill default styling applies evenly */}
-                                                            <div className="ql-snow">
-                                                                <div
-                                                                    className="ql-editor p-0 text-sm text-gray-800 leading-relaxed max-w-none"
-                                                                    dangerouslySetInnerHTML={{ __html: note.content }}
-                                                                />
-                                                            </div>
-
-                                                            <div className="mt-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 pt-3">
-                                                                <div className="flex items-center gap-1.5 font-medium">
-                                                                    <User className="w-3 h-3" />
-                                                                    <span>Added by <span className="font-bold text-gray-600">{note.created_by_name}</span> on {new Date(note.created_at).toLocaleString()}</span>
-                                                                </div>
-                                                                {canManageNotes && (
-                                                                    <div className="hidden group-hover:flex gap-4 items-center">
+                                                            {/* CHECK IF THIS SPECIFIC NOTE IS BEING EDITED */}
+                                                            {editingNoteId === note.id ? (
+                                                                <div className="animate-in fade-in zoom-in duration-200">
+                                                                    <ReactQuill
+                                                                        theme="snow"
+                                                                        value={noteContent}
+                                                                        onChange={setNoteContent}
+                                                                        modules={quillModules}
+                                                                        className="bg-white rounded-lg mb-4"
+                                                                    />
+                                                                    <div className="flex gap-3 justify-end mt-4">
                                                                         <button
-                                                                            onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content); setShowNoteEditor(true); }}
-                                                                            className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                            onClick={() => { setEditingNoteId(null); setNoteContent(''); }}
+                                                                            className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition"
                                                                         >
-                                                                            <Edit2 className="w-3 h-3" /> Edit
+                                                                            Cancel
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => handleDeleteNote(note.id)}
-                                                                            className="text-red-600 hover:text-red-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                            onClick={handleSaveNote}
+                                                                            className="px-4 py-2 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose-700 transition"
                                                                         >
-                                                                            <Trash2 className="w-3 h-3" /> Delete
+                                                                            Update Note
                                                                         </button>
                                                                     </div>
-                                                                )}
-                                                            </div>
+                                                                </div>
+                                                            ) : (
+                                                                // VIEW MODE (Original Content)
+                                                                <>
+                                                                    <div className="ql-snow">
+                                                                        <div className="max-h-60 overflow-y-auto pr-2 border-b border-gray-100">
+                                                                            <div
+                                                                                className="ql-editor p-0 text-sm text-gray-800 leading-relaxed max-w-none"
+                                                                                dangerouslySetInnerHTML={{ __html: note.content }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="mt-4 flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-50 pt-3">
+                                                                        <div className="flex items-center gap-1.5 font-medium">
+                                                                            <User className="w-3 h-3" />
+                                                                            <span>Added by <span className="font-bold text-gray-600">{note.created_by_name}</span> on {new Date(note.created_at).toLocaleString()}</span>
+                                                                        </div>
+                                                                        {canManageNotes && (
+                                                                            <div className="flex gap-3 justify-end mt-4">
+                                                                                <button
+                                                                                    onClick={() => { setEditingNoteId(note.id); setNoteContent(note.content); }}
+                                                                                    className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                                >
+                                                                                    <Edit2 className="w-3 h-3" /> Edit
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteNote(note.id)}
+                                                                                    className="text-red-600 hover:text-red-800 font-bold flex items-center gap-1 uppercase tracking-wider"
+                                                                                >
+                                                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                        {user?.role === 'account_manager' && (
+                                                                            <button
+                                                                                onClick={() => setViewingNote(note)}
+                                                                                className="text-gray-600 hover:text-gray-800 font-bold flex items-center gap-1 uppercase tracking-wider transition-colors"
+                                                                            >
+                                                                                <Eye className="w-3 h-3" /> View
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1135,6 +1181,30 @@ export default function ClientDetail() {
                     </div>
                 </div>
             )}
+
+            {/* Note View Modal */}
+            {viewingNote && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                            <h3 className="font-bold text-gray-900">Viewing Note</h3>
+                            <button onClick={() => setViewingNote(null)} className="p-2 hover:bg-gray-200 rounded-full">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto">
+                            <div
+                                className="ql-editor p-0 text-sm text-gray-800 leading-relaxed"
+                                dangerouslySetInnerHTML={{ __html: viewingNote.content }}
+                            />
+                        </div>
+                        <div className="px-6 py-4 border-t bg-gray-50 text-[10px] text-gray-500">
+                            Added by {viewingNote.created_by_name} on {new Date(viewingNote.created_at).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

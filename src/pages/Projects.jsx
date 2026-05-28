@@ -131,7 +131,7 @@ export default function Projects() {
                     <p className="text-gray-500 mt-1">Detailed breakdown of active services for your department.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {(user?.role === 'am_head' || user?.role === 'account_manager' || user?.role === 'marketing_manager' || user?.role === 'dev_manager' || user?.role === 'seo_specialist' || user?.role === 'ads_specialist') && (
+                    {(user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager' || user?.role === 'seo_specialist' || user?.role === 'ads_specialist') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
