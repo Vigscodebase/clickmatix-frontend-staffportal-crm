@@ -144,12 +144,13 @@ export default function UserManagement() {
                 </button>
             </div>
 
-            {error && (
+            {/* Render error on main page only if modal is closed */}
+            {/* {error && !modalOpen && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5" />
                     {error}
                 </div>
-            )}
+            )} */}
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <table className="w-full">
@@ -228,6 +229,14 @@ export default function UserManagement() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                            {/* Render validation error alert inside the popup form */}
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
+                                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                    <span className="text-sm font-semibold">{error}</span>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="col-span-2 md:col-span-1">
                                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Full Name</label>

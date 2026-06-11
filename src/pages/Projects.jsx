@@ -18,6 +18,12 @@ export default function Projects() {
     const [newServiceName, setNewServiceName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // --- NEW EDIT SERVICE STATES ---
+    const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
+    const [editServiceId, setEditServiceId] = useState(null);
+    const [editServiceName, setEditServiceName] = useState('');
+    const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
+
     const allowedRoles = [
         'super_admin', 'admin', 'sales', 'finance',
         'am_head', 'account_manager', 'marketing_manager', 'dev_manager'
@@ -53,6 +59,33 @@ export default function Projects() {
             alert(error.response?.data?.error || "Failed to add service.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // --- NEW EDIT SERVICE HANDLER ---
+    const handleEditService = async (e) => {
+        e.preventDefault();
+        if (!editServiceId || !editServiceName.trim()) return;
+
+        setIsEditingSubmitting(true);
+        try {
+            const oldService = services.find(s => s.id === editServiceId);
+            await axios.put(`/api/service-types/${editServiceId}`, { name: editServiceName.trim() });
+
+            // Re-align active filter category if the current filter was renamed
+            if (oldService && activeFilter === oldService.name) {
+                setActiveFilter(editServiceName.trim());
+            }
+
+            // Sync fresh structural data and realigned project rows instantly
+            await fetchServices();
+            await fetchProjects();
+            setIsEditServiceModalOpen(false);
+        } catch (error) {
+            console.error("Error editing service:", error);
+            alert(error.response?.data?.error || "Failed to update service.");
+        } finally {
+            setIsEditingSubmitting(false);
         }
     };
 
@@ -131,7 +164,7 @@ export default function Projects() {
                     <p className="text-gray-500 mt-1">Detailed breakdown of active services for your department.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {(user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager' || user?.role === 'seo_specialist' || user?.role === 'ads_specialist') && (
+                    {(user?.role === 'am_head' || user?.role === 'marketing_manager' || user?.role === 'dev_manager') && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -175,12 +208,29 @@ export default function Projects() {
                     </button>
                 ))}
                 {canAddService && (
-                    <button
-                        onClick={() => setIsServiceModalOpen(true)}
-                        className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-blue-600 hover:bg-blue-700 text-white shadow duration-150"
-                    >
-                        + Add service
-                    </button>
+                    <>
+                        <button
+                            onClick={() => setIsServiceModalOpen(true)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-blue-600 hover:bg-blue-700 text-white shadow duration-150"
+                        >
+                            + Add service
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (services.length > 0) {
+                                    setEditServiceId(services[0].id);
+                                    setEditServiceName(services[0].name);
+                                } else {
+                                    setEditServiceId(null);
+                                    setEditServiceName('');
+                                }
+                                setIsEditServiceModalOpen(true);
+                            }}
+                            className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-gray-600 hover:bg-gray-700 text-white shadow duration-150"
+                        >
+                            Edit service
+                        </button>
+                    </>
                 )}
             </div>
 
@@ -251,20 +301,7 @@ export default function Projects() {
 
                                 <div className="text-center flex flex-col items-center">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                                    <select
-                                        value={project.status || 'Active'}
-                                        disabled={!canEdit}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => handleStatusUpdate(e, project.id, { status: e.target.value })}
-                                        /* FIX: Added [text-align-last:center] and reduced padding to fix spacing */
-                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border focus:outline-none appearance-none text-center [text-align-last:center] ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'} ${getStatusColor(project.status, project.status_color)}`}
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="Pause">Pause</option>
-                                        <option value="Hold">Hold</option>
-                                        <option value="Pending">Pending</option>
-                                        <option value="Review Required">Review Required</option>
-                                    </select>
+                                    <span className={`px-3 py-1 w-[141px] rounded-full text-[10px] font-black uppercase tracking-wider border focus:outline-none appearance-none text-center [text-align-last:center] cursor-pointer ${getStatusColor(project.status, project.status_color)}`}>{project.status}</span>
                                 </div>
                                 <div className="text-center min-w-[100px]">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</p>
@@ -326,6 +363,76 @@ export default function Projects() {
                                     disabled={isSubmitting || !newServiceName.trim()}
                                 >
                                     {isSubmitting ? 'Saving...' : 'Save Service'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* --- NEW EDIT SERVICE MODAL --- */}
+            {isEditServiceModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">Edit Service Type</h2>
+
+                        <form onSubmit={handleEditService}>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Target Service
+                                </label>
+                                <select
+                                    value={editServiceId || ''}
+                                    onChange={(e) => {
+                                        const id = Number(e.target.value);
+                                        const found = services.find(s => s.id === id);
+                                        setEditServiceId(id);
+                                        setEditServiceName(found ? found.name : '');
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                                    required
+                                >
+                                    {services.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    New Service Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editServiceName}
+                                    onChange={(e) => setEditServiceName(e.target.value)}
+                                    placeholder="e.g., SEO, G-ADS, META"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    required
+                                />
+                            </div>
+
+                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 mb-2">
+                                <p className="text-[11px] text-amber-800 leading-normal">
+                                    <strong>Automatic Cascade Warning:</strong> Renaming this type updates all corresponding client projects instantly.
+                                </p>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditServiceModalOpen(false)}
+                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition duration-150"
+                                    disabled={isEditingSubmitting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition duration-150 disabled:opacity-50"
+                                    disabled={isEditingSubmitting || !editServiceName.trim()}
+                                >
+                                    {isEditingSubmitting ? 'Updating...' : 'Update Service'}
                                 </button>
                             </div>
                         </form>

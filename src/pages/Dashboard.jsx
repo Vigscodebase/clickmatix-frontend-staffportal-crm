@@ -79,7 +79,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                     {/* Team/Mine Toggle for AM Head and Admins */}
-                    {(isAMHead || isManager || isTL) && (
+                    {(isAMHead || isManager) && (
                         <div className="bg-white p-1 rounded-xl border border-gray-200 flex shadow-sm">
                             <button
                                 onClick={() => setDashboardView('team')}
@@ -95,15 +95,17 @@ export default function Dashboard() {
                             </button>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm min-w-[180px] relative hover:border-blue-300 transition-colors">
-                        <Filter className="w-4 h-4 text-gray-400" />
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="text-sm font-bold bg-transparent outline-none text-gray-700 w-full cursor-pointer z-10"
-                        />
-                    </div>
+                    {(isSales || isFinance || isAMHead || isAM || isManager || isAdmin) && (
+                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm min-w-[180px] relative hover:border-blue-300 transition-colors">
+                            <Filter className="w-4 h-4 text-gray-400" />
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="text-sm font-bold bg-transparent outline-none text-gray-700 w-full cursor-pointer z-10"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -179,7 +181,7 @@ export default function Dashboard() {
                             icon={FolderOpen}
                             color="bg-purple-600"
                         />
-                        <div className="bg-white p-6 rounded-2xl border border-amber-50 shadow-sm">
+                        {/* <div className="bg-white p-6 rounded-2xl border border-amber-50 shadow-sm">
                             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-3">Traffic Light Status</p>
                             <div className="flex items-center gap-3">
                                 <div className="flex-1 h-2 rounded-full bg-green-500 shadow-sm shadow-green-100"></div>
@@ -187,7 +189,7 @@ export default function Dashboard() {
                                 <div className="flex-1 h-2 rounded-full bg-rose-400 opacity-30"></div>
                             </div>
                             <p className="text-[10px] text-gray-400 mt-2 font-bold text-center">GREEN ZONE (ACTIVE)</p>
-                        </div>
+                        </div> */}
                     </>
                 )}
             </div>
