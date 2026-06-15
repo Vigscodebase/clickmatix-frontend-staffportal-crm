@@ -3,6 +3,7 @@ import axios from '../lib/axios';
 import { Search, Filter, Users, ChevronRight, Loader2, UserPlus, X, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useForm, useFieldArray } from 'react-hook-form';
 
 export default function Clients() {
     const { user, hasPermission } = useAuth();
@@ -15,12 +16,42 @@ export default function Clients() {
     const [error, setError] = useState('');
     const [serviceTypes, setServiceTypes] = useState([]);
 
-    const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', am_head_id: '', services: [],
-        agreement_status: 'Pending', invoice_status: 'Pending'
+    const navigate = useNavigate();
+
+    // --- REACT HOOK FORM SETUP ---
+    const {
+        register,
+        handleSubmit,
+        control,
+        reset,
+        setValue,
+        watch,
+        formState: { errors, isSubmitting }
+    } = useForm({
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: '',
+            domain: '',
+            am_id: '',
+            mm_id: '',
+            dm_id: '',
+            am_head_id: '',
+            services: [],
+            agreement_status: 'Pending',
+            invoice_status: 'Pending'
+        }
     });
 
-    const navigate = useNavigate();
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: 'services'
+    });
+
+    // --- REVENUE & STATUS TRACKERS (WATCHERS) ---
+    const watchedServices = watch('services') || [];
+    const watchedAgreementStatus = watch('agreement_status');
+    const watchedInvoiceStatus = watch('invoice_status');
 
     useEffect(() => {
         fetchClients();
@@ -61,34 +92,20 @@ export default function Clients() {
     };
 
     const handleAddService = () => {
-        setFormData({
-            ...formData,
-            services: [...formData.services, { type: 'SEO', fee: 0, spend: 0, tl_id: '', revenue_type: 'Recurring', revenue_month: '' }]
-        });
+        append({ type: 'SEO', fee: 0, spend: 0, tl_id: '', revenue_type: 'Recurring', revenue_month: '' });
     };
 
-    const handleRemoveService = (index) => {
-        const newServices = [...formData.services];
-        newServices.splice(index, 1);
-        setFormData({ ...formData, services: newServices });
+    const handleCloseModal = () => {
+        reset();
+        setModalOpen(false);
     };
 
-    const handleServiceChange = (index, field, value) => {
-        const newServices = [...formData.services];
-        newServices[index][field] = value;
-        setFormData({ ...formData, services: newServices });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const onSubmitForm = async (data) => {
         setError('');
         try {
-            await axios.post('/api/clients', formData);
+            await axios.post('/api/clients', data);
             setModalOpen(false);
-            setFormData({
-                name: '', email: '', phone: '', domain: '', am_id: '', mm_id: '', dm_id: '', am_head_id: '', services: [],
-                agreement_status: 'Pending', invoice_status: 'Pending'
-            });
+            reset();
             fetchClients();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create client');
@@ -105,8 +122,7 @@ export default function Clients() {
     const canAdd = hasPermission('can_add');
     const canApproveFinance = user?.role === 'finance' || user?.role === 'super_admin';
 
-    // FIX: Show toggle to anyone with Full Access or MMs/DMs
-    const canToggleView = ['am_head', 'marketing_manager', 'dev_manager'].includes(user?.role)
+    const canToggleView = ['am_head', 'marketing_manager', 'dev_manager'].includes(user?.role);
 
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
@@ -117,9 +133,12 @@ export default function Clients() {
     };
 
     const unifiedInputClass = "w-full h-10 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-all";
+    const errorInputClass = "border-red-500 focus:border-red-500 focus:ring-red-500";
 
-    const serviceCounts = formData.services.reduce((acc, svc) => {
-        acc[svc.type] = (acc[svc.type] || 0) + 1;
+    const serviceCounts = watchedServices.reduce((acc, svc) => {
+        if (svc.type) {
+            acc[svc.type] = (acc[svc.type] || 0) + 1;
+        }
         return acc;
     }, {});
 
@@ -161,7 +180,10 @@ export default function Clients() {
                     </div>
                     {canAdd && (
                         <button
-                            onClick={() => setModalOpen(true)}
+                            onClick={() => {
+                                reset();
+                                setModalOpen(true);
+                            }}
                             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors shadow-lg shadow-blue-200"
                         >
                             <UserPlus className="w-5 h-5" />
@@ -275,12 +297,12 @@ export default function Clients() {
                         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8 overflow-hidden">
                             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                                 <h2 className="text-xl font-bold text-gray-900">Add New Client Account</h2>
-                                <button onClick={() => setModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <button onClick={handleCloseModal} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-6">
+                            <form onSubmit={handleSubmit(onSubmitForm)} className="p-6">
                                 {error && (
                                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
                                         <AlertCircle className="w-5 h-5" />
@@ -298,43 +320,63 @@ export default function Clients() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Client Name</label>
                                             <input
                                                 type="text"
-                                                required
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className={unifiedInputClass}
+                                                className={`${unifiedInputClass} ${errors.name ? errorInputClass : ''}`}
                                                 placeholder="Company Name"
+                                                {...register('name', {
+                                                    required: 'Client name is required',
+                                                    validate: (val) => !/[^a-zA-Z\s]/.test(val) || 'Only letters and spaces are allowed'
+                                                })}
                                             />
+                                            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Official Website (Domain)</label>
                                             <input
                                                 type="text"
-                                                value={formData.domain}
-                                                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                                                className={unifiedInputClass}
+                                                className={`${unifiedInputClass} ${errors.domain ? errorInputClass : ''}`}
                                                 placeholder="e.g. clickmatix.com"
+                                                {...register('domain', {
+                                                    required: 'Official website domain is required',
+                                                    pattern: {
+                                                        value: /^((https?|ftp|smtp):\/\/)?(www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?(\/[^\s?#]*)*(\?[^\s#]*)?(#[^\s]*)?$/,
+                                                        message: 'Invalid website or domain address format'
+                                                    }
+                                                })}
                                             />
+                                            {errors.domain && <p className="text-xs text-red-500 mt-1">{errors.domain.message}</p>}
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
                                                 <input
-                                                    type="email"
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                    className={unifiedInputClass}
+                                                    type="text"
+                                                    className={`${unifiedInputClass} ${errors.email ? errorInputClass : ''}`}
                                                     placeholder="contact@client.com"
+                                                    {...register('email', {
+                                                        required: 'Email address is required',
+                                                        pattern: {
+                                                            value: /^([a-zA-Z0-9._]+)@([a-zA-Z0-9-]+)\.([a-z]{2,3})(\.[a-z]{2,3})?$/,
+                                                            message: 'Invalid email format'
+                                                        }
+                                                    })}
                                                 />
+                                                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Phone</label>
                                                 <input
                                                     type="text"
-                                                    value={formData.phone}
-                                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                    className={unifiedInputClass}
+                                                    className={`${unifiedInputClass} ${errors.phone ? errorInputClass : ''}`}
                                                     placeholder="Phone Number"
+                                                    {...register('phone', {
+                                                        required: 'Phone number is required',
+                                                        pattern: {
+                                                            value: /^([0-9]{5})[-. ]?([0-9]{5})([-. ]?([0-9]{2}))?$/,
+                                                            message: 'Invalid phone structure format'
+                                                        }
+                                                    })}
                                                 />
+                                                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
                                             </div>
                                         </div>
                                     </div>
@@ -348,9 +390,8 @@ export default function Clients() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">AM Head</label>
                                             <select
                                                 disabled={user?.role === 'sales'}
-                                                value={formData.am_head_id}
-                                                onChange={(e) => setFormData({ ...formData, am_head_id: e.target.value })}
                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                                {...register('am_head_id')}
                                             >
                                                 <option value="">Select AM Head</option>
                                                 {staff.filter(s => s.role === 'am_head').map(s => (
@@ -362,9 +403,8 @@ export default function Clients() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Marketing Manager (MM)</label>
                                             <select
                                                 disabled={user?.role === 'sales'}
-                                                value={formData.mm_id}
-                                                onChange={(e) => setFormData({ ...formData, mm_id: e.target.value })}
                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                                {...register('mm_id')}
                                             >
                                                 <option value="">Select Manager</option>
                                                 {staff.filter(s => s.department === 'Marketing' || s.role === 'marketing_manager').map(s => (
@@ -376,9 +416,8 @@ export default function Clients() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Dev Manager (DM)</label>
                                             <select
                                                 disabled={user?.role === 'sales'}
-                                                value={formData.dm_id}
-                                                onChange={(e) => setFormData({ ...formData, dm_id: e.target.value })}
                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                                {...register('dm_id')}
                                             >
                                                 <option value="">Select Manager</option>
                                                 {staff.filter(s => s.department === 'Development' || s.role === 'dev_manager').map(s => (
@@ -401,13 +440,12 @@ export default function Clients() {
                                             <div>
                                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Agreement Status</label>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.agreement_status === 'Signed' ? 'bg-green-100 text-green-700' : formData.agreement_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                        {formData.agreement_status}
+                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${watchedAgreementStatus === 'Signed' ? 'bg-green-100 text-green-700' : watchedAgreementStatus === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                        {watchedAgreementStatus}
                                                     </span>
                                                     <select
                                                         className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
-                                                        value={formData.agreement_status}
-                                                        onChange={(e) => setFormData({ ...formData, agreement_status: e.target.value })}
+                                                        {...register('agreement_status')}
                                                     >
                                                         <option value="Pending">Pending</option>
                                                         <option value="Signed">Signed</option>
@@ -418,13 +456,12 @@ export default function Clients() {
                                             <div>
                                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Payment/Invoice Status</label>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${formData.invoice_status === 'Paid' ? 'bg-green-100 text-green-700' : formData.invoice_status === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                        {formData.invoice_status}
+                                                    <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${watchedInvoiceStatus === 'Paid' ? 'bg-green-100 text-green-700' : watchedInvoiceStatus === 'Review Required' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                        {watchedInvoiceStatus}
                                                     </span>
                                                     <select
                                                         className="text-xs border border-gray-200 rounded p-1.5 outline-none focus:border-blue-500 bg-white"
-                                                        value={formData.invoice_status}
-                                                        onChange={(e) => setFormData({ ...formData, invoice_status: e.target.value })}
+                                                        {...register('invoice_status')}
                                                     >
                                                         <option value="Pending">Pending</option>
                                                         <option value="Paid">Paid</option>
@@ -452,25 +489,28 @@ export default function Clients() {
                                         </button>
                                     </div>
 
-                                    {formData.services.length === 0 ? (
+                                    {fields.length === 0 ? (
                                         <div className="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                                             <p className="text-sm text-gray-500 font-medium">No services added to this account yet.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            {formData.services.map((svc, index) => {
-                                                const showAdSpend = svc.type === 'G-ADS' || svc.type === 'META';
-                                                const showDate = svc.revenue_type === 'Recurring';
+                                            {fields.map((svc, index) => {
+                                                const currentType = watchedServices[index]?.type;
+                                                const currentRevType = watchedServices[index]?.revenue_type;
+
+                                                const showAdSpend = currentType === 'G-ADS' || currentType === 'META';
+                                                const showDate = currentRevType === 'Recurring';
 
                                                 let colCount = 5;
                                                 if (showAdSpend) colCount++;
                                                 if (showDate) colCount++;
 
                                                 const gridColsClass = colCount === 5 ? 'grid-cols-5' : colCount === 6 ? 'grid-cols-6' : 'grid-cols-7';
-                                                const isDuplicate = serviceCounts[svc.type] > 1;
+                                                const isDuplicate = serviceCounts[currentType] > 1;
 
                                                 return (
-                                                    <div key={index} className={`grid ${gridColsClass} gap-4 bg-gray-50 p-4 rounded-2xl border ${isDuplicate ? 'border-red-300 bg-red-50/30' : 'border-gray-100'} items-end transition-all duration-300`}>
+                                                    <div key={svc.id} className={`grid ${gridColsClass} gap-4 bg-gray-50 p-4 rounded-2xl border ${isDuplicate ? 'border-red-300 bg-red-50/30' : 'border-gray-100'} items-end transition-all duration-300`}>
 
                                                         {/* 1. Service Type */}
                                                         <div className="col-span-1">
@@ -478,10 +518,8 @@ export default function Clients() {
                                                                 <label className={`block text-[10px] font-black uppercase tracking-widest ${isDuplicate ? 'text-red-500' : 'text-gray-400'}`}>Service Type</label>
                                                             </div>
                                                             <select
-                                                                value={svc.type}
-                                                                onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
-                                                                className={`${unifiedInputClass} ${isDuplicate ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-white' : ''}`}
-                                                                required
+                                                                className={`${unifiedInputClass} ${isDuplicate ? 'border-red-500 text-red-700' : ''}`}
+                                                                {...register(`services.${index}.type`, { required: true })}
                                                             >
                                                                 <option value="" disabled>Select Service</option>
                                                                 {serviceTypes.map((st) => (
@@ -496,12 +534,20 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Fee</label>
                                                             <input
-                                                                type="number"
-                                                                value={svc.fee}
-                                                                onChange={(e) => handleServiceChange(index, 'fee', e.target.value)}
-                                                                className={unifiedInputClass}
+                                                                type="text"
+                                                                className={`${unifiedInputClass} ${errors.services?.[index]?.fee ? errorInputClass : ''}`}
                                                                 placeholder="0.00"
+                                                                {...register(`services.${index}.fee`, {
+                                                                    required: 'Fee is required',
+                                                                    pattern: {
+                                                                        value: /^[0-9]+$/,
+                                                                        message: 'Numbers only'
+                                                                    }
+                                                                })}
                                                             />
+                                                            {errors.services?.[index]?.fee && (
+                                                                <p className="text-[10px] text-red-500 mt-1">{errors.services[index].fee.message}</p>
+                                                            )}
                                                         </div>
 
                                                         {/* 3. Ad Spend (Conditional) */}
@@ -509,12 +555,19 @@ export default function Clients() {
                                                             <div className="col-span-1 animate-in fade-in zoom-in duration-200">
                                                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ad Spend</label>
                                                                 <input
-                                                                    type="number"
-                                                                    value={svc.spend}
-                                                                    onChange={(e) => handleServiceChange(index, 'spend', e.target.value)}
-                                                                    className={unifiedInputClass}
+                                                                    type="text"
+                                                                    className={`${unifiedInputClass} ${errors.services?.[index]?.spend ? errorInputClass : ''}`}
                                                                     placeholder="0.00"
+                                                                    {...register(`services.${index}.spend`, {
+                                                                        pattern: {
+                                                                            value: /^[0-9]+$/,
+                                                                            message: 'Numbers only'
+                                                                        }
+                                                                    })}
                                                                 />
+                                                                {errors.services?.[index]?.spend && (
+                                                                    <p className="text-[10px] text-red-500 mt-1">{errors.services[index].spend.message}</p>
+                                                                )}
                                                             </div>
                                                         )}
 
@@ -522,9 +575,8 @@ export default function Clients() {
                                                         <div className="col-span-1">
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rev Type</label>
                                                             <select
-                                                                value={svc.revenue_type}
-                                                                onChange={(e) => handleServiceChange(index, 'revenue_type', e.target.value)}
                                                                 className={unifiedInputClass}
+                                                                {...register(`services.${index}.revenue_type`)}
                                                             >
                                                                 <option value="Recurring">Recurring</option>
                                                                 <option value="One-off">One-off</option>
@@ -537,9 +589,8 @@ export default function Clients() {
                                                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Date</label>
                                                                 <input
                                                                     type="date"
-                                                                    value={svc.revenue_month}
-                                                                    onChange={(e) => handleServiceChange(index, 'revenue_month', e.target.value)}
                                                                     className={unifiedInputClass}
+                                                                    {...register(`services.${index}.revenue_month`)}
                                                                 />
                                                             </div>
                                                         )}
@@ -549,9 +600,8 @@ export default function Clients() {
                                                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Team Lead</label>
                                                             <select
                                                                 disabled={user?.role === 'sales' || user?.role === 'finance'}
-                                                                value={svc.tl_id}
-                                                                onChange={(e) => handleServiceChange(index, 'tl_id', e.target.value)}
                                                                 className={`${unifiedInputClass} disabled:bg-gray-50`}
+                                                                {...register(`services.${index}.tl_id`)}
                                                             >
                                                                 <option value="">Select TL</option>
                                                                 {staff.filter(s => ['seo_specialist', 'ads_specialist', 'dev_manager'].includes(s.role)).map(s => (
@@ -564,7 +614,7 @@ export default function Clients() {
                                                         <div className="col-span-1 flex flex-col justify-end items-end pb-2 gap-1">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleRemoveService(index)}
+                                                                onClick={() => remove(index)}
                                                                 className="p-2 text-gray-400 hover:text-red-600 transition-colors bg-white rounded-lg border border-transparent hover:border-red-100 hover:bg-red-50"
                                                             >
                                                                 <Trash2 className="w-5 h-5" />
@@ -583,19 +633,19 @@ export default function Clients() {
                                 <div className="mt-10 flex gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setModalOpen(false)}
+                                        onClick={handleCloseModal}
                                         className="flex-1 px-6 py-3 border border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50 transition-colors"
                                     >
                                         Discard Changes
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={hasDuplicateServices}
-                                        className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-colors shadow-lg ${hasDuplicateServices
+                                        disabled={hasDuplicateServices || isSubmitting}
+                                        className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-colors shadow-lg ${hasDuplicateServices || isSubmitting
                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                                             : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'}`}
                                     >
-                                        {hasDuplicateServices ? 'Fix Duplicate Services to Save' : 'Create Account & Services'}
+                                        {isSubmitting ? 'Creating...' : hasDuplicateServices ? 'Fix Duplicate Services to Save' : 'Create Account & Services'}
                                     </button>
                                 </div>
                             </form>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from '../lib/axios';
 import { useAuth } from '../context/AuthContext';
+import { useForm } from 'react-hook-form';
 
 export default function Profile() {
     // We now pull the new updateUser function from our context
@@ -12,10 +13,24 @@ export default function Profile() {
     const [imageError, setImageError] = useState("");
     const fileInputRef = useRef(null);
 
-    const [formData, setFormData] = useState({
-        name: '',
-        avatar_url: ''
+    // --- REACT HOOK FORM SETUP ---
+    const {
+        register,
+        handleSubmit,
+        reset,
+        setValue,
+        watch,
+        formState: { errors }
+    } = useForm({
+        defaultValues: {
+            name: '',
+            avatar_url: ''
+        }
     });
+
+    // Explicitly watch form fields to update live UI avatar previews reactively
+    const watchedName = watch('name') || '';
+    const watchedAvatarUrl = watch('avatar_url') || '';
 
     useEffect(() => {
         fetchProfile();
@@ -26,7 +41,9 @@ export default function Profile() {
             const response = await axios.get('/api/profile');
             const userData = response.data.user;
             setProfileData(userData);
-            setFormData({
+
+            // Seed default values cleanly into form tracking state
+            reset({
                 name: userData.name || '',
                 avatar_url: userData.avatar_url || ''
             });
@@ -54,24 +71,23 @@ export default function Profile() {
 
         const reader = new FileReader();
         reader.onloadend = () => {
-            setFormData({ ...formData, avatar_url: reader.result });
+            setValue('avatar_url', reader.result);
         };
         reader.readAsDataURL(file);
     };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSave = async (data) => {
         setIsSaving(true);
         try {
-            await axios.put('/api/profile', formData);
+            await axios.put('/api/profile', data);
             setIsEditing(false);
             fetchProfile();
 
             // NEW: Instantly update the sidebar and global context with the new data!
             if (updateUser) {
                 updateUser({
-                    name: formData.name,
-                    avatar_url: formData.avatar_url
+                    name: data.name,
+                    avatar_url: data.avatar_url
                 });
             }
         } catch (error) {
@@ -112,16 +128,16 @@ export default function Profile() {
                         onClick={handleImageClick}
                         title={isEditing ? "Click to change profile picture" : ""}
                     >
-                        {formData.avatar_url ? (
+                        {watchedAvatarUrl ? (
                             <img
-                                src={formData.avatar_url}
+                                src={watchedAvatarUrl}
                                 alt="Profile"
                                 className="w-full h-full object-cover"
                                 onError={(e) => { e.target.onerror = null; e.target.src = ''; }}
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-blue-400 text-3xl font-bold bg-blue-50">
-                                {formData.name.charAt(0).toUpperCase()}
+                                {watchedName ? watchedName.charAt(0).toUpperCase() : profileData.name.charAt(0).toUpperCase()}
                             </div>
                         )}
 
@@ -159,18 +175,22 @@ export default function Profile() {
                 </div>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
+            <form onSubmit={handleSubmit(handleSave)} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
                         <input
                             type="text"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             disabled={!isEditing}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 transition-colors"
-                            required
+                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 transition-colors ${errors.name ? 'border-red-500 focus:ring-red-200 focus:border-red-500' : 'border-gray-300'}`}
+                            {...register('name', {
+                                required: 'Full name is required',
+                                validate: (val) => !/[^a-zA-Z\s]/.test(val) || 'Only letters and spaces are allowed'
+                            })}
                         />
+                        {errors.name && (
+                            <p className="text-xs text-red-500 mt-1.5 font-bold">{errors.name.message}</p>
+                        )}
                     </div>
 
                     <div>
@@ -202,7 +222,10 @@ export default function Profile() {
                                 onClick={() => {
                                     setIsEditing(false);
                                     setImageError("");
-                                    setFormData({ name: profileData.name, avatar_url: profileData.avatar_url || '' });
+                                    reset({
+                                        name: profileData.name || '',
+                                        avatar_url: profileData.avatar_url || ''
+                                    });
                                 }}
                                 className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
                             >

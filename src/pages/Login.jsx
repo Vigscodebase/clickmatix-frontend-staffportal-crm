@@ -75,9 +75,9 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p className="mt-6 text-center text-xs text-gray-500">
+                {/* <p className="mt-6 text-center text-xs text-gray-500">
                     Default password: <code className="bg-gray-100 px-2 py-1 rounded">password123</code>
-                </p>
+                </p> */}
             </div>
         </div>
     );

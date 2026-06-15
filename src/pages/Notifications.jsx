@@ -93,7 +93,7 @@ export default function Notifications() {
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
                                         <Clock className="w-3 h-3" />
-                                        {new Date(n.created_at).toLocaleString()}
+                                        {new Date(n.updated_at).toLocaleString()}
                                     </div>
                                 </div>
                             </div>

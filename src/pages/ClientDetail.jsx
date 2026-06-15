@@ -824,7 +824,7 @@ export default function ClientDetail() {
 
                             </form>
 
-                            {client.onboarding_pdf_url && (
+                            {/* {client.onboarding_pdf_url && (
                                 <div className="mt-4 p-2 bg-white rounded border border-green-200 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Star className="w-4 h-4 text-green-600" />
@@ -833,7 +833,7 @@ export default function ClientDetail() {
                                     </div>
                                     <span className="text-[10px] text-gray-400">Date: {client.onboarding_date}</span>
                                 </div>
-                            )}
+                            )} */}
 
                         </div>
                     )}

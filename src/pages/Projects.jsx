@@ -3,6 +3,7 @@ import axios from '../lib/axios';
 import { LayoutDashboard, Search, Briefcase, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useForm } from 'react-hook-form';
 
 export default function Projects() {
     const { user, hasPermission } = useAuth();
@@ -15,14 +16,27 @@ export default function Projects() {
 
     const [services, setServices] = useState([]);
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-    const [newServiceName, setNewServiceName] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // --- NEW EDIT SERVICE STATES ---
     const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
-    const [editServiceId, setEditServiceId] = useState(null);
-    const [editServiceName, setEditServiceName] = useState('');
-    const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
+
+    // --- REACT HOOK FORM SETUP ---
+    const {
+        register: registerAdd,
+        handleSubmit: handleAddSubmit,
+        reset: resetAdd,
+        formState: { errors: errorsAdd, isSubmitting: isAddSubmitting }
+    } = useForm({
+        defaultValues: { newServiceName: '' }
+    });
+
+    const {
+        register: registerEdit,
+        handleSubmit: handleEditSubmit,
+        reset: resetEdit,
+        setValue: setEditValue,
+        formState: { errors: errorsEdit, isSubmitting: isEditSubmitting }
+    } = useForm({
+        defaultValues: { editServiceId: '', editServiceName: '' }
+    });
 
     const allowedRoles = [
         'super_admin', 'admin', 'sales', 'finance',
@@ -44,37 +58,31 @@ export default function Projects() {
         }
     };
 
-    const handleAddService = async (e) => {
-        e.preventDefault();
-        if (!newServiceName.trim()) return;
-
-        setIsSubmitting(true);
+    // --- ADD SERVICE HANDLER ---
+    const onAddServiceSubmit = async (data) => {
         try {
-            const response = await axios.post('/api/service-types', { name: newServiceName });
+            const response = await axios.post('/api/service-types', { name: data.newServiceName.trim() });
             setServices([...services, response.data]);
-            setNewServiceName('');
+            resetAdd();
             setIsServiceModalOpen(false);
         } catch (error) {
             console.error("Error adding service:", error);
             alert(error.response?.data?.error || "Failed to add service.");
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
-    // --- NEW EDIT SERVICE HANDLER ---
-    const handleEditService = async (e) => {
-        e.preventDefault();
-        if (!editServiceId || !editServiceName.trim()) return;
+    // --- EDIT SERVICE HANDLER ---
+    const onEditServiceSubmit = async (data) => {
+        const serviceId = Number(data.editServiceId);
+        if (!serviceId) return;
 
-        setIsEditingSubmitting(true);
         try {
-            const oldService = services.find(s => s.id === editServiceId);
-            await axios.put(`/api/service-types/${editServiceId}`, { name: editServiceName.trim() });
+            const oldService = services.find(s => s.id === serviceId);
+            await axios.put(`/api/service-types/${serviceId}`, { name: data.editServiceName.trim() });
 
             // Re-align active filter category if the current filter was renamed
             if (oldService && activeFilter === oldService.name) {
-                setActiveFilter(editServiceName.trim());
+                setActiveFilter(data.editServiceName.trim());
             }
 
             // Sync fresh structural data and realigned project rows instantly
@@ -84,8 +92,6 @@ export default function Projects() {
         } catch (error) {
             console.error("Error editing service:", error);
             alert(error.response?.data?.error || "Failed to update service.");
-        } finally {
-            setIsEditingSubmitting(false);
         }
     };
 
@@ -210,7 +216,10 @@ export default function Projects() {
                 {canAddService && (
                     <>
                         <button
-                            onClick={() => setIsServiceModalOpen(true)}
+                            onClick={() => {
+                                resetAdd();
+                                setIsServiceModalOpen(true);
+                            }}
                             className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-blue-600 hover:bg-blue-700 text-white shadow duration-150"
                         >
                             + Add service
@@ -218,11 +227,12 @@ export default function Projects() {
                         <button
                             onClick={() => {
                                 if (services.length > 0) {
-                                    setEditServiceId(services[0].id);
-                                    setEditServiceName(services[0].name);
+                                    resetEdit({
+                                        editServiceId: services[0].id,
+                                        editServiceName: services[0].name
+                                    });
                                 } else {
-                                    setEditServiceId(null);
-                                    setEditServiceName('');
+                                    resetEdit({ editServiceId: '', editServiceName: '' });
                                 }
                                 setIsEditServiceModalOpen(true);
                             }}
@@ -332,20 +342,24 @@ export default function Projects() {
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                         <h2 className="text-xl font-bold mb-4 text-gray-800">Add New Service</h2>
 
-                        <form onSubmit={handleAddService}>
+                        <form onSubmit={handleAddSubmit(onAddServiceSubmit)}>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Service Name
                                 </label>
                                 <input
                                     type="text"
-                                    value={newServiceName}
-                                    onChange={(e) => setNewServiceName(e.target.value)}
-                                    placeholder="e.g., SEO, G-ADS, META"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
+                                    placeholder="e.g., SEO, G-ADS, META-ADS"
+                                    className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${errorsAdd.newServiceName ? 'border-red-500 focus:ring-red-200' : 'border-gray-300'}`}
                                     autoFocus
+                                    {...registerAdd('newServiceName', {
+                                        required: 'Service name is required',
+                                        validate: (val) => !/[^a-zA-Z\s_-]/.test(val) || 'Numbers and special symbols are not allowed (only letters, spaces, hyphens, and underscores)'
+                                    })}
                                 />
+                                {errorsAdd.newServiceName && (
+                                    <p className="text-xs text-red-500 mt-1">{errorsAdd.newServiceName.message}</p>
+                                )}
                             </div>
 
                             <div className="flex justify-end space-x-3 mt-6">
@@ -353,16 +367,16 @@ export default function Projects() {
                                     type="button"
                                     onClick={() => setIsServiceModalOpen(false)}
                                     className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition duration-150"
-                                    disabled={isSubmitting}
+                                    disabled={isAddSubmitting}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition duration-150 disabled:opacity-50"
-                                    disabled={isSubmitting || !newServiceName.trim()}
+                                    disabled={isAddSubmitting}
                                 >
-                                    {isSubmitting ? 'Saving...' : 'Save Service'}
+                                    {isAddSubmitting ? 'Saving...' : 'Save Service'}
                                 </button>
                             </div>
                         </form>
@@ -370,27 +384,27 @@ export default function Projects() {
                 </div>
             )}
 
-            {/* --- NEW EDIT SERVICE MODAL --- */}
+            {/* --- EDIT SERVICE MODAL --- */}
             {isEditServiceModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
                         <h2 className="text-xl font-bold mb-4 text-gray-800">Edit Service Type</h2>
 
-                        <form onSubmit={handleEditService}>
+                        <form onSubmit={handleEditSubmit(onEditServiceSubmit)}>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Select Target Service
                                 </label>
                                 <select
-                                    value={editServiceId || ''}
-                                    onChange={(e) => {
-                                        const id = Number(e.target.value);
-                                        const found = services.find(s => s.id === id);
-                                        setEditServiceId(id);
-                                        setEditServiceName(found ? found.name : '');
-                                    }}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                                    required
+                                    {...registerEdit('editServiceId', {
+                                        required: true,
+                                        onChange: (e) => {
+                                            const id = Number(e.target.value);
+                                            const found = services.find(s => s.id === id);
+                                            setEditValue('editServiceName', found ? found.name : '');
+                                        }
+                                    })}
                                 >
                                     {services.map(s => (
                                         <option key={s.id} value={s.id}>{s.name}</option>
@@ -404,12 +418,16 @@ export default function Projects() {
                                 </label>
                                 <input
                                     type="text"
-                                    value={editServiceName}
-                                    onChange={(e) => setEditServiceName(e.target.value)}
-                                    placeholder="e.g., SEO, G-ADS, META"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                    required
+                                    placeholder="e.g., SEO, G-ADS, META_ADS"
+                                    className={`w-full px-3 py-2 border text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${errorsEdit.editServiceName ? 'border-red-500 focus:ring-red-200' : 'border-gray-300'}`}
+                                    {...registerEdit('editServiceName', {
+                                        required: 'Service name is required',
+                                        validate: (val) => !/[^a-zA-Z\s_-]/.test(val) || 'Numbers and special symbols are not allowed (only letters, spaces, hyphens, and underscores)'
+                                    })}
                                 />
+                                {errorsEdit.editServiceName && (
+                                    <p className="text-xs text-red-500 mt-1">{errorsEdit.editServiceName.message}</p>
+                                )}
                             </div>
 
                             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 mb-2">
@@ -423,16 +441,16 @@ export default function Projects() {
                                     type="button"
                                     onClick={() => setIsEditServiceModalOpen(false)}
                                     className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition duration-150"
-                                    disabled={isEditingSubmitting}
+                                    disabled={isEditSubmitting}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition duration-150 disabled:opacity-50"
-                                    disabled={isEditingSubmitting || !editServiceName.trim()}
+                                    disabled={isEditSubmitting}
                                 >
-                                    {isEditingSubmitting ? 'Updating...' : 'Update Service'}
+                                    {isEditSubmitting ? 'Updating...' : 'Update Service'}
                                 </button>
                             </div>
                         </form>
